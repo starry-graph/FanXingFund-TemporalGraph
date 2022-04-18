@@ -1,0 +1,2 @@
+method,dataset,valid_auc,accuracy,f1,auc,params
+OnlineGTC,ia-contact,0.0000,0.8343,0.8558,0.8898,""

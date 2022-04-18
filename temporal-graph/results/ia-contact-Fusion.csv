@@ -1,0 +1,2 @@
+method,dataset,valid_auc,accuracy,f1,auc,params
+Fusion,ia-contact,0.9036,0.8926,0.8973,0.9212,"hard=soft,n_layer=2,n_head=2,time=time,freeze=False,n_degree=20,batch_size=200,dropout=0.1,lr=0.0001"

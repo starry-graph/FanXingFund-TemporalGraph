@@ -1,0 +1,2 @@
+method,dataset,valid_auc,accuracy,f1,auc,params
+Subgraph,ia-contact,0.9055,0.8872,0.8921,0.9221,"num_prop=2,num_mlp_layers=2,alpha=0.0,n_layer=2,n_head=2,freeze=False,num_neighbors=20,dropout=0.1,batchsize=200,uniform=False"
