@@ -20,3 +20,13 @@ Details refer to `temporal-graph/README.md` or email me (**tyzheng@zju.edu.cn**)
 ## Graph Knowledge Representation
 - [ ] Hyper Graph Enhanced Disentanglement
 - [x] Heterogeneous GNNs Layerwise Knowledge Amalgamation
+
+## Negative Influence Blocking in Social Networks
+
+See the papaer [Adaptive Influence Blocking: Minimizing the Negative Spread by Observation-based
+Policies](https://ieeexplore.ieee.org/document/8731584) for details. See also `AIBLT/README.md`.
+- [ ] Dataset is not included
+- [X] k-R
+- [X] alpha-T
+- [X] OS-IP
+- [X] OS-RP
