@@ -1,4 +1,4 @@
-# 2021-FanXingFund-TemporalGraph
+# FanXingFund-TemporalGraph
 A unifed repo for individual research codes of temporal graphs.
 
 ## Heterogeneous Graph
@@ -23,7 +23,7 @@ Details refer to `temporal-graph/README.md` or email me (**tyzheng@zju.edu.cn**)
 
 ## Negative Influence Blocking in Social Networks
 
-See the papaer [Adaptive Influence Blocking: Minimizing the Negative Spread by Observation-based
+See the paper [Adaptive Influence Blocking: Minimizing the Negative Spread by Observation-based
 Policies](https://ieeexplore.ieee.org/document/8731584) for details. See also `AIBLT/README.md`.
 - [ ] Dataset is not included
 - [X] k-R
