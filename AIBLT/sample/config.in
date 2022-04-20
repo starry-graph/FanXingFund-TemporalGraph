@@ -1,0 +1,15 @@
+data/test.in
+graphseed 30125
+seed      16113
+l           1
+epsilon    0.5
+type        1
+k           1
+t           7
+wsum        0.7
+alpha      0.4
+evalcnt   1
+verbose    1
+ninfseeds  5
+1
+0 68 443 310 154
