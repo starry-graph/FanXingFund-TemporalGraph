@@ -25,7 +25,7 @@ Details refer to `temporal-graph/README.md` or email me (**tyzheng@zju.edu.cn**)
 
 See the paper [Adaptive Influence Blocking: Minimizing the Negative Spread by Observation-based
 Policies](https://ieeexplore.ieee.org/document/8731584) for details. See also `AIBLT/README.md`.
-- [ ] Dataset is not included
+- [X] Dataset
 - [X] k-R
 - [X] alpha-T
 - [X] OS-IP
