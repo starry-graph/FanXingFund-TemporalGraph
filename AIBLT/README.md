@@ -6,4 +6,4 @@ Policies](https://ieeexplore.ieee.org/document/8731584) for details.
 
 There is Chinese documentation with usage details, see `doc/AIBLT_doc_CN.docx`.
 
-There is also a sample config file and dataset in the `sample` folder. Note that it is a made-up dataset only for testing, not a real social network. Real datasets are large and not uploaded in the repository. To run the sample, copy the executable file `aiblt` to the `sample` folder, and run `./aiblt config`. See the Chinese documentation above for details.
+There is also a sample config file and dataset in the `sample` folder. Some datasets are in the `dataset` folder. To run the sample, copy the executable file `aiblt` to the `sample` folder, and run `./aiblt config`. See the Chinese documentation above for details.
