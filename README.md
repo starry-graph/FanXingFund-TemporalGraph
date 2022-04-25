@@ -13,6 +13,7 @@ Details refer to `temporal-graph/README.md` or email me (**tyzheng@zju.edu.cn**)
 - [x] TAP-GNN
 - [x] DPS
 - [x] TIP-GNN 
+- [x] Temporal GraphSAGE 
 
 ## Hyper Graph
 - [ ] Hyper GNN
