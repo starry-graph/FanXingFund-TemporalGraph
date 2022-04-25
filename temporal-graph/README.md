@@ -127,3 +127,21 @@ subgraph_model
 `python -m subgraph_model.exper_edge_np -d ia-contact`
 
 `python -m subgraph_model.exper_node_np -d ia-contact`
+
+#### Temporal GraphSAGE: a variant working on a sequence of graph snapshots
+
+- Model construction
+
+```
+temporal_sage
+├── batch_loader.py
+├── batch_model.py
+├── model.py
+├── temporal_sage.py
+└── util.py
+```
+
+```
+pip install dgl-cu102==0.6.1
+python temporal_sage/temporal_sage.py --dataset fb-forum --num_ts 128
+```
