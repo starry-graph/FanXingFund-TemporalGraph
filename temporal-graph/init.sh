@@ -4,6 +4,8 @@ mkdir -p train_data valid_data test_data
 mkdir -p label_train_data label_valid_data label_test_data
 # directories for training
 mkdir -p ckpt saved_models
+# directories for log files
+mkdir -p log
 # directories for results
 mkdir -p results
 # specified cache directories for DPS

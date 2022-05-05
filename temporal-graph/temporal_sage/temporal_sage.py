@@ -112,7 +112,7 @@ def main(args):
         drop_last=False, num_workers=0)
 
     logger.info('Begin training with %d nodes, %d edges.', num_nodes, num_edges)
-    for epoch in range(50):
+    for epoch in range(args.epochs):
         loss_avg = 0
 
         model.train()
@@ -157,16 +157,36 @@ def main(args):
         y_prob = np.hstack(y_probs)
         y_pred = np.hstack(y_probs) > 0.5
         y_label = np.hstack(y_labels)
+        acc = accuracy_score(y_label, y_pred)
         ap = average_precision_score(y_label, y_prob)
         auc = roc_auc_score(y_label, y_prob)
         f1 = f1_score(y_label, y_pred)
         logger.info('Epoch %03d Training loss: %.4f, Test F1: %.4f, AP: %.4f, AUC: %.4f', epoch, loss_avg, f1, ap, auc)
 
+    # Write results
+    val_auc = 0.0
+    log_results(args, val_auc, acc, f1, auc)
+
+def log_results(args, val_auc, test_acc, test_f1, test_auc):
+    res_path = "results/{}-TemporalSAGE.csv".format(args.dataset)
+    headers = ["method", "dataset", "valid_auc", "accuracy", "f1", "auc", "params"]
+    if not os.path.exists(res_path):
+        f = open(res_path, 'w+')
+        f.write(",".join(headers) + "\r\n")
+        f.close()
+        os.chmod(res_path, 0o777)
+    config = f"num_ts={args.num_ts},hidden={args.n_hidden},lr={args.lr},n_bases={args.n_bases},n_layers={args.n_layers}"
+    with open(res_path, "a") as file:
+        file.write("TemporalSAGE,{},{:.4f},{:.4f},{:.4f},{:.4f},\"{}\"".format(
+            args.dataset, val_auc, test_acc, test_f1, test_auc, config))
+        file.write("\n")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='RGCN')
     parser.add_argument("--dataset", type=str, default="ia-contact",
             help="dataset name")
+    parser.add_argument("--epochs", type=int, default=50,
+            help="number of training epochs")
     parser.add_argument("--num_ts", type=int, default=128,
             help="nums of snapshot to split")
     parser.add_argument("--n-hidden", type=int, default=16,

@@ -143,5 +143,5 @@ temporal_sage
 
 ```
 pip install dgl-cu102==0.6.1
-python temporal_sage/temporal_sage.py --dataset fb-forum --num_ts 128
+python temporal_sage/temporal_sage.py --dataset fb-forum --num_ts 128 --epochs 50
 ```
