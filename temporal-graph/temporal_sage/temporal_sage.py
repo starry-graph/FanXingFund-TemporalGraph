@@ -2,6 +2,7 @@
 tasks: . All of them are based on a RGCN backbone.
 '''
 import argparse
+from asyncio.log import logger
 import os
 import time
 
@@ -16,13 +17,15 @@ import torch
 import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 from batch_loader import TemporalEdgeCollator, TemporalEdgeDataLoader
 from batch_model import BatchModel
 from model import Model, compute_loss, construct_negative_graph
 from util import (CSRA_PATH, DBLP_PATH, NOTE_PATH, EarlyStopMonitor,
                   set_logger, set_random_seed, write_result)
+import pickle as pkl
+# from IPython import embed
 
 
 def _load_data(dataset="ia-contact", mode="format_data", root_dir="./"):
@@ -60,32 +63,36 @@ def covert_to_dgl(edges, nodes):
     return graph
 
 
-def split_graph(graph, num_ts=128):
-    max_ts, min_ts = graph.edata['ts'].max(), graph.edata['ts'].min()
-    timespan = (max_ts - min_ts) // num_ts + 1
+def split_graph(args, graph, num_ts=128):
+    max_ts, min_ts = graph.edata['ts'].max().item(), graph.edata['ts'].min().item()
+    timespan = np.ceil((max_ts - min_ts) / num_ts)
 
     logger.info(f'Split graph into {num_ts} snapshots.')
     graphs = []
-    for i in range(num_ts):
+
+    if args.temporal_feat:
+        spath = f'{args.root_dir}format_data/dblp-coauthors.nfeat.pkl'
+        logger.info(f'Loading temporal node feature from {spath}')
+        node_feats = pkl.load(open(spath, 'rb'))
+        
+    for i in trange(num_ts):
         ts_low = min_ts + i*timespan
         ts_high = ts_low + timespan
 
         eids = graph.filter_edges(lambda x: (x.data['ts']>= ts_low) & (x.data['ts'] < ts_high))
         ts_graph = graph.edge_subgraph(eids, preserve_nodes=True)
+
+        if args.temporal_feat:
+            ts_graph.ndata['feat'] = node_feats[int(ts_low)]
         graphs.append(ts_graph)
     return graphs
 
 
-datasets = ['fb-forum', 'ia-contact', 'ia-contacts_hypertext2009', 'ia-enron-employees', 'ia-escorts-dynamic', \
-    'ia-movielens-user2tags-10m', 'ia-primary-school-proximity', 'ia-radoslaw-email', 'ia-reality-call', \
-        'ia-retweet-pol', 'ia-slashdot-reply-dir', 'ia-workplace-contacts', 'soc-sign-bitcoinotc', 'soc-wiki-elec']
-root_dir = './'
-
 def main(args):
-    logger.info(f'Loading dataset {args.dataset} from {root_dir}.')
-    edges, nodes = load_data(dataset=args.dataset, mode="format", root_dir=root_dir)
+    logger.info(f'Loading dataset {args.dataset} from {args.root_dir}')
+    edges, nodes = load_data(dataset=args.dataset, mode="format", root_dir=args.root_dir)
     graph = covert_to_dgl(edges, nodes)
-    coauthors = split_graph(graph, num_ts=args.num_ts)
+    coauthors = split_graph(args, graph, num_ts=args.num_ts)
 
     device = torch.device('cuda:{}'.format(args.gpu))
     # coauthors = [g.to(device) for g in coauthors]
@@ -183,8 +190,12 @@ def log_results(args, val_auc, test_acc, test_f1, test_auc):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='RGCN')
-    parser.add_argument("--dataset", type=str, default="ia-contact",
-            help="dataset name")
+    parser.add_argument("--dataset", type=str, default="ia-contact", help="dataset name", \
+        choices=['fb-forum', 'ia-contact', 'ia-contacts_hypertext2009', 'ia-enron-employees', 'ia-escorts-dynamic', \
+            'ia-movielens-user2tags-10m', 'ia-primary-school-proximity', 'ia-radoslaw-email', 'ia-reality-call', \
+                'ia-retweet-pol', 'ia-slashdot-reply-dir', 'ia-workplace-contacts', 'soc-sign-bitcoinotc', 'soc-wiki-elec', \
+                    'dblp-coauthors'])
+    parser.add_argument('--root_dir', type=str, default='./')
     parser.add_argument("--epochs", type=int, default=50,
             help="number of training epochs")
     parser.add_argument("--num_ts", type=int, default=128,
@@ -199,6 +210,7 @@ if __name__ == '__main__':
             help="number of filter weight matrices, default: -1 [use all]")
     parser.add_argument("--n-layers", type=int, default=2,
             help="number of propagation rounds")
+    parser.add_argument('--temporal_feat', action='store_true', help='whether to use temporal node feature')
 
     logger = set_logger()
     set_random_seed(seed=42)
