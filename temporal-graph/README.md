@@ -63,6 +63,24 @@ data_loader
 
 ### Method
 
+#### Temporal GraphSAGE: a variant working on a sequence of graph snapshots
+
+- Model construction
+
+```
+temporal_sage
+├── batch_loader.py
+├── batch_model.py
+├── model.py
+├── temporal_sage.py
+└── util.py
+```
+
+```
+pip install dgl-cu102==0.6.1
+python temporal_sage/temporal_sage.py --dataset fb-forum --num_ts 128 --epochs 50 --named_feats 1 2 3 4 5 6 --timespan_start 1095290000 --timespan_end 1096500000
+```
+
 #### TAP-GNN: Temporal Aggregation and Propagation GraphNeural Networks for Dynamic Representation
 
 - Module construction
@@ -128,20 +146,4 @@ subgraph_model
 
 `python -m subgraph_model.exper_node_np -d ia-contact`
 
-#### Temporal GraphSAGE: a variant working on a sequence of graph snapshots
 
-- Model construction
-
-```
-temporal_sage
-├── batch_loader.py
-├── batch_model.py
-├── model.py
-├── temporal_sage.py
-└── util.py
-```
-
-```
-pip install dgl-cu102==0.6.1
-python temporal_sage/temporal_sage.py --dataset fb-forum --num_ts 128 --epochs 50
-```
