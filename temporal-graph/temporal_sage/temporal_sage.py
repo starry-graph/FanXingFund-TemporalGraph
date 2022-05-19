@@ -3,6 +3,7 @@ tasks: . All of them are based on a RGCN backbone.
 '''
 import argparse
 from asyncio.log import logger
+from logging import raiseExceptions
 import os
 import time
 
@@ -25,7 +26,7 @@ from model import Model, compute_loss, construct_negative_graph
 from util import (CSRA_PATH, DBLP_PATH, NOTE_PATH, EarlyStopMonitor,
                   set_logger, set_random_seed, write_result)
 import pickle as pkl
-# from IPython import embed
+from IPython import embed
 
 
 def _load_data(dataset="ia-contact", mode="format_data", root_dir="./"):
@@ -56,7 +57,7 @@ def covert_to_dgl(edges, nodes):
     edges['dst_nid'] = edges['to_node_id'].map(node2nid)
 
     graph = dgl.graph((torch.tensor(edges['src_nid']), torch.tensor(edges['dst_nid'])))
-    graph.edata['ts']  = torch.tensor(edges['timestamp']).unsqueeze(1)
+    graph.edata['ts']  = torch.tensor(edges['timestamp'])
     graph.ndata['feat'] = torch.from_numpy(np.eye(len(nodes))).to(torch.float) # one_hot
 
     logger.info('Graph %s.', str(graph))
@@ -84,8 +85,113 @@ def split_graph(args, graph, num_ts=128):
 
         if args.temporal_feat:
             ts_graph.ndata['feat'] = node_feats[int(ts_low)]
+
+        if 'all' not in args.named_feats:
+            feat_select = []
+            old_feat = ts_graph.ndata['feat']
+            for dim in args.named_feats:
+                try:
+                    dim = int(dim)
+                except:
+                    raise ValueError(f'--named_feats must be list(int), but {dim} is not a integer')
+                feat_select.append(old_feat[:, dim:dim+1])
+            ts_graph.ndata['feat'] = torch.hstack(feat_select)
         graphs.append(ts_graph)
+    new_feat = graphs[0].ndata['feat']
+    logger.info(f'Select these dims: {args.named_feats} and change node feats from {old_feat.shape} to {new_feat.shape}')
     return graphs
+
+
+def train(args, model, train_loader, features, opt):
+    for epoch in range(args.epochs):
+        loss_avg, y_probs, y_labels = 0, [], []
+        model.train()
+        batch_bar = tqdm(train_loader, desc='train')
+        for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(batch_bar):
+            history_inputs = [nfeat[nodes].to(args.device) for nfeat, nodes in zip(features, input_nodes)]
+            # batch_inputs = nfeats[input_nodes].to(device)
+            pos_graph = pos_graph.to(args.device)
+            neg_graph = neg_graph.to(args.device)
+            # blocks = [block.int().to(device) for block in blocks]
+            history_blocks = [[block.int().to(args.device) for block in blocks] for blocks in history_blocks]
+
+            pos_score, neg_score = model(history_blocks, history_inputs, pos_graph, neg_graph)
+            loss = compute_loss(pos_score, neg_score)
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+            loss_avg += loss.item()
+
+            y_probs.append(pos_score.detach().cpu().numpy())
+            y_labels.append(np.ones_like(y_probs[-1]))
+            y_probs.append(neg_score.detach().cpu().numpy())
+            y_labels.append(np.zeros_like(y_probs[-1]))
+
+            batch_bar.set_postfix(loss=round(loss.item(), 4))
+        loss_avg /= len(train_loader)
+        y_prob = np.hstack([y.squeeze(1) for y in y_probs])
+        y_pred = y_prob > 0.5
+        y_label = np.hstack([y.squeeze(1) for y in y_labels])
+
+        acc = accuracy_score(y_label, y_pred)
+        ap = average_precision_score(y_label, y_prob)
+        auc = roc_auc_score(y_label, y_prob)
+        f1 = f1_score(y_label, y_pred)
+        logger.info('Epoch %03d Training loss: %.4f, Test ACC: %.4f, F1: %.4f, AP: %.4f, AUC: %.4f', \
+            epoch, loss_avg, acc, f1, ap, auc)
+
+    logger.info('Saving model')
+    torch.save(model.state_dict(), MODEL_SAVE_PATH)
+
+
+def infer(args, model, model_path, test_loader, features):
+    model.load_state_dict(torch.load(model_path))
+    model.eval()
+    y_probs, y_labels = [], []
+    y_timespan, y_outs = [], []
+    min_ts, max_ts = np.inf, -np.inf
+    with torch.no_grad():
+        for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(tqdm(test_loader, desc='infer')):
+            cur_ts = pos_graph.edata['ts']
+            min_timespan, max_timespan = torch.min(cur_ts).item(), torch.max(cur_ts).item()
+            min_ts, max_ts = min(min_ts, min_timespan), max(max_ts, max_timespan)
+            if min_timespan >= args.timespan_end or max_timespan < args.timespan_start:
+                continue
+
+            history_inputs = [nfeat[nodes].to(args.device) for nfeat, nodes in zip(features, input_nodes)]
+            # batch_inputs = nfeats[input_nodes].to(device)
+            pos_graph = pos_graph.to(args.device)
+            neg_graph = neg_graph.to(args.device)
+            # blocks = [block.int().to(device) for block in blocks]
+            history_blocks = [[block.int().to(args.device) for block in blocks] for blocks in history_blocks]
+
+            pos_score, neg_score = model(history_blocks, history_inputs, pos_graph, neg_graph)
+            y_probs.append(pos_score.detach().cpu().numpy())
+            y_labels.append(np.ones_like(y_probs[-1]))
+            y_probs.append(neg_score.detach().cpu().numpy())
+            y_labels.append(np.zeros_like(y_probs[-1]))
+
+            y_timespan.append(cur_ts.detach().cpu().numpy())
+            y_outs.append(pos_score.detach().cpu().numpy())
+
+    if len(y_probs) == 0:
+        raise ValueError(f'--timespan start/end({args.timespan_start}/{args.timespan_end}) must betweeen {min_ts} and {max_ts}.')
+
+    y_prob = np.hstack([y.squeeze(1) for y in y_probs])
+    y_pred = y_prob > 0.5
+    y_label = np.hstack([y.squeeze(1) for y in y_labels])
+
+    acc = accuracy_score(y_label, y_pred)
+    ap = average_precision_score(y_label, y_prob)
+    auc = roc_auc_score(y_label, y_prob)
+    f1 = f1_score(y_label, y_pred)
+    logger.info('Test ACC: %.4f, F1: %.4f, AP: %.4f, AUC: %.4f', acc, f1, ap, auc)
+
+    y_ts = np.hstack([y for y in y_timespan])
+    idx = np.logical_and(y_ts >= args.timespan_start, y_ts < args.timespan_end)
+    y_out = np.hstack([y.squeeze(1) for y in y_outs])[idx]
+    logger.info(f'Saving results({len(y_out)}/{len(y_ts)}) between timespan {args.timespan_start} and {args.timespan_end}')
+    np.save(RESULE_SAVE_PATH, y_out)
 
 
 def main(args):
@@ -94,12 +200,10 @@ def main(args):
     graph = covert_to_dgl(edges, nodes)
     coauthors = split_graph(args, graph, num_ts=args.num_ts)
 
-    device = torch.device('cuda:{}'.format(args.gpu))
-    # coauthors = [g.to(device) for g in coauthors]
     node_features = coauthors[0].ndata['feat']
     n_features = node_features.shape[1]
 
-    model = BatchModel(n_features, 100, 100).to(device)
+    model = BatchModel(n_features, args.n_hidden, args.embed_dim, args.n_layers).to(args.device)
     opt = torch.optim.Adam(model.parameters())
 
     train_idx = int(len(coauthors) * 0.75)
@@ -112,108 +216,95 @@ def main(args):
     train_range = list(range(1, train_idx))
     test_range = list(range(train_idx, len(coauthors)))
     train_loader = TemporalEdgeDataLoader(coauthors, train_range, 
-        sampler, negative_sampler=neg_sampler, batch_size=1024, shuffle=False,
+        sampler, negative_sampler=neg_sampler, batch_size=args.bs, shuffle=False,
         drop_last=False, num_workers=0)
     test_loader = TemporalEdgeDataLoader(coauthors, test_range,
-        sampler, negative_sampler=neg_sampler, batch_size=1024, shuffle=False,
+        sampler, negative_sampler=neg_sampler, batch_size=args.bs, shuffle=False,
         drop_last=False, num_workers=0)
 
     logger.info('Begin training with %d nodes, %d edges.', num_nodes, num_edges)
-    for epoch in range(args.epochs):
-        loss_avg = 0
+    train(args, model, train_loader, features, opt)
+    infer(args, model, MODEL_SAVE_PATH, test_loader, features)
 
-        model.train()
-        batch_bar = tqdm(train_loader)
-        for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(batch_bar):
-            history_inputs = [nfeat[nodes].to(device) for nfeat, nodes in zip(features, input_nodes)]
-            # batch_inputs = nfeats[input_nodes].to(device)
-            pos_graph = pos_graph.to(device)
-            neg_graph = neg_graph.to(device)
-            # blocks = [block.int().to(device) for block in blocks]
-            history_blocks = [[block.int().to(device) for block in blocks] for blocks in history_blocks]
-
-            pos_score, neg_score = model(history_blocks, history_inputs, pos_graph, neg_graph)
-            loss = compute_loss(pos_score, neg_score)
-            opt.zero_grad()
-            loss.backward()
-            opt.step()
-            loss_avg += loss.item()
-            batch_bar.set_postfix(loss=round(loss.item(), 4))
-
-        loss_avg /= len(train_loader)
-        y_probs = []
-        y_labels = []
-        model.eval()
-        with torch.no_grad():
-            for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(tqdm(test_loader)):
-                history_inputs = [nfeat[nodes].to(device) for nfeat, nodes in zip(features, input_nodes)]
-                # batch_inputs = nfeats[input_nodes].to(device)
-                pos_graph = pos_graph.to(device)
-                neg_graph = neg_graph.to(device)
-                # blocks = [block.int().to(device) for block in blocks]
-                history_blocks = [[block.int().to(device) for block in blocks] for blocks in history_blocks]
-
-                pos_score, neg_score = model(history_blocks, history_inputs, pos_graph, neg_graph)
-                y_probs.append(pos_score.detach().cpu().numpy())
-                y_labels.append(np.ones_like(y_probs[-1]))
-                y_probs.append(neg_score.detach().cpu().numpy())
-                y_labels.append(np.zeros_like(y_probs[-1]))
-
-        y_probs = [y.squeeze(1) for y in y_probs]
-        y_labels = [y.squeeze(1) for y in y_labels]
-        y_prob = np.hstack(y_probs)
-        y_pred = np.hstack(y_probs) > 0.5
-        y_label = np.hstack(y_labels)
-        acc = accuracy_score(y_label, y_pred)
-        ap = average_precision_score(y_label, y_prob)
-        auc = roc_auc_score(y_label, y_prob)
-        f1 = f1_score(y_label, y_pred)
-        logger.info('Epoch %03d Training loss: %.4f, Test F1: %.4f, AP: %.4f, AUC: %.4f', epoch, loss_avg, f1, ap, auc)
-
-    # Write results
-    val_auc = 0.0
-    log_results(args, val_auc, acc, f1, auc)
-
-def log_results(args, val_auc, test_acc, test_f1, test_auc):
-    res_path = "results/{}-TemporalSAGE.csv".format(args.dataset)
-    headers = ["method", "dataset", "valid_auc", "accuracy", "f1", "auc", "params"]
-    if not os.path.exists(res_path):
-        f = open(res_path, 'w+')
-        f.write(",".join(headers) + "\r\n")
-        f.close()
-        os.chmod(res_path, 0o777)
-    config = f"num_ts={args.num_ts},hidden={args.n_hidden},lr={args.lr},n_bases={args.n_bases},n_layers={args.n_layers}"
-    with open(res_path, "a") as file:
-        file.write("TemporalSAGE,{},{:.4f},{:.4f},{:.4f},{:.4f},\"{}\"".format(
-            args.dataset, val_auc, test_acc, test_f1, test_auc, config))
-        file.write("\n")
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='RGCN')
-    parser.add_argument("--dataset", type=str, default="ia-contact", help="dataset name", \
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", 
+                        type=str, 
+                        default="ia-contact", 
+                        help="dataset name", \
         choices=['fb-forum', 'ia-contact', 'ia-contacts_hypertext2009', 'ia-enron-employees', 'ia-escorts-dynamic', \
             'ia-movielens-user2tags-10m', 'ia-primary-school-proximity', 'ia-radoslaw-email', 'ia-reality-call', \
-                'ia-retweet-pol', 'ia-slashdot-reply-dir', 'ia-workplace-contacts', 'soc-sign-bitcoinotc', 'soc-wiki-elec', \
-                    'dblp-coauthors'])
-    parser.add_argument('--root_dir', type=str, default='./')
-    parser.add_argument("--epochs", type=int, default=50,
-            help="number of training epochs")
-    parser.add_argument("--num_ts", type=int, default=128,
-            help="nums of snapshot to split")
-    parser.add_argument("--n-hidden", type=int, default=16,
-            help="number of hidden units")
-    parser.add_argument("--gpu", type=int, default=0,
-            help="gpu")
-    parser.add_argument("--lr", type=float, default=1e-2,
-            help="learning rate")
-    parser.add_argument("--n-bases", type=int, default=-1,
-            help="number of filter weight matrices, default: -1 [use all]")
-    parser.add_argument("--n-layers", type=int, default=2,
-            help="number of propagation rounds")
-    parser.add_argument('--temporal_feat', action='store_true', help='whether to use temporal node feature')
+                'ia-retweet-pol', 'ia-slashdot-reply-dir', 'ia-workplace-contacts', 'soc-sign-bitcoinotc', \
+                    'soc-wiki-elec', 'dblp-coauthors'])
+    parser.add_argument('--root_dir', 
+                        type=str, 
+                        default='./')
+    parser.add_argument('--prefix',
+                        type=str,
+                        default='TemporalSAGE',
+                        help='prefix to name the checkpoints')
+    parser.add_argument("--epochs", 
+                        type=int, 
+                        default=50,
+                        help="number of training epochs")
+    parser.add_argument("--bs", 
+                        type=int, 
+                        default=1024,
+                        help="batch_size")
+    parser.add_argument("--num_ts", 
+                        type=int, 
+                        default=128,
+                        help="nums of snapshot to split")
+    parser.add_argument("--n_hidden", 
+                        type=int, 
+                        default=100,
+                        help="number of hidden units")
+    parser.add_argument("--embed_dim", 
+                        type=int, 
+                        default=100,
+                        help="dimension of node embedings")
+    parser.add_argument("--n_layers", 
+                        type=int, 
+                        default=2,
+                        help="number of propagation rounds")
+    
+    parser.add_argument("--gpu",
+                        type=int, 
+                        default=0,
+                        help="gpu")
+    parser.add_argument("--lr", 
+                        type=float, 
+                        default=1e-2,
+                        help="learning rate")
 
+    parser.add_argument('--temporal_feat', 
+                        action='store_true', 
+                        help='whether to use temporal node feature')
+    parser.add_argument('--named_feats', 
+                        nargs='+', 
+                        default=['all'],
+                        help='Which dimensions of features are selected for training')
+    parser.add_argument('--timespan_start', 
+                        type=float, 
+                        default=-np.inf,
+                        help='start timespan of infering')
+    parser.add_argument('--timespan_end', 
+                        type=float, 
+                        default=np.inf,
+                        help='end timespan of infering')
+    
     logger = set_logger()
     set_random_seed(seed=42)
     args = parser.parse_args()
     logger.info(args)
+
+    PARAM_STR = f'{args.epochs}-{args.bs}-{args.num_ts}-{args.n_hidden}'
+    PARAM_STR += f'-{args.embed_dim}-{args.n_layers}-{args.lr}'
+    PARAM_STR += f'-{args.temporal_feat}-{args.named_feats}'
+
+    MODEL_SAVE_PATH = f'./saved_models/{args.prefix}-{PARAM_STR}-{args.dataset}.pth'
+    RESULE_SAVE_PATH = f'./saved_models/{args.prefix}-{PARAM_STR}-{args.timespan_start}-{args.timespan_end}-{args.dataset}.npy'
+    args.device = torch.device('cuda:{}'.format(args.gpu))
+    
     main(args)

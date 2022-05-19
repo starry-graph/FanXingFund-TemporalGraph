@@ -12,6 +12,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 from IPython import embed
+# from util import myout
 
 class TemporalEdgeDataLoader(EdgeDataLoader):
     """We iterate over edges sorting by timestamp, generating the list of
@@ -60,12 +61,12 @@ class TemporalEdgeCollator:
 
         self.graphs = graphs
         self.year_range = year_range
-        eids = [graphs[year].edges('eid') for year in year_range]
-        years = [torch.full(eid.shape, year).int() for year, eid in zip(year_range, eids)]
+        eids = [graphs[year].edges('eid') for year in year_range] # [tensor(200), ..., tensor(200)]
+        years = [torch.full(eid.shape, year).int() for year, eid in zip(year_range, eids)] # [tensor(200), ..., tensor(200)]
         eids = torch.cat(eids)
         years = torch.cat(years)
-        self.eids = eids
-        self.years = years
+        self.eids = eids # [n]
+        self.years = years # [n]
         # self._dataset = torch.stack([eids, years]).t() # (N, 2)
         self._dataset = TemporalDataset(eids, years)
 
@@ -88,8 +89,8 @@ class TemporalEdgeCollator:
     def _collate(self, items):
         # eids = items[0]
         # years = items[1]
-        eids = torch.cat([item[0] for item in items])
-        years = torch.cat([item[1] for item in items])
+        eids = torch.cat([item[0] for item in items]) # [b*n]
+        years = torch.cat([item[1] for item in items]) # [b*n]
         min_year = years.min().item()
         assert min_year >= 1, 'Past graphs are empty.'
 
@@ -97,8 +98,8 @@ class TemporalEdgeCollator:
             # self.logger.warning('We have to filter edges later than the \
             #     minimum year of the current batch.')
             # self.warning = False
-            eids = eids[years == min_year]
-            years = years[years == min_year]
+            eids = eids[years == min_year] # [n]
+            years = years[years == min_year] # [n]
 
         start_year = min_year - self.history_window
         history_gs = [self.graphs[i] for i in range(start_year, min_year)]
@@ -118,10 +119,10 @@ class TemporalEdgeCollator:
 
 
     def _collate_with_negative_sampling(self, items):
-        eids = torch.stack([item[0] for item in items])
-        years = torch.stack([item[1] for item in items])
-        # eids = items[0]
-        # years = items[1]
+        # items: list(tuple(tensor, tensor))
+        eids = torch.stack([item[0] for item in items]) # [b]
+        years = torch.stack([item[1] for item in items]) # [b]
+
         min_year = years.min().item()
         assert min_year >= 1, 'Past graphs are empty.'
 
@@ -133,46 +134,43 @@ class TemporalEdgeCollator:
             years = years[years == min_year]
 
         start_year = min_year - self.history_window
-        history_gs = [self.graphs[i] for i in range(start_year, min_year)]
-        # history_gs = [self.graphs[i] for i in range(min_year)]
-        g = self.graphs[min_year]
+        history_gs = [self.graphs[i] for i in range(start_year, min_year)] # [Graph(num_nodes=274, num_edges=4442)]
+        g = self.graphs[min_year] # Graph(num_nodes=274, num_edges=338)
 
         self.g = g
         self.g_sampling = history_gs[-1]
         # pair_graph = g.edge_subgraph(eids, relabel_nodes=False) 0.7.1
-        
-        try:
-            pair_graph = g.edge_subgraph(eids, preserve_nodes=True) # 0.6.1
-        except:
-            embed()
-        induced_edges = pair_graph.edata[dgl.EID]
+        pair_graph = g.edge_subgraph(eids, preserve_nodes=True) # 0.6.1
+        induced_edges = pair_graph.edata[dgl.EID] # [n]
 
-        neg_srcdst = self.negative_sampler(g, eids)
+        neg_srcdst = self.negative_sampler(g, eids) # (tensor(n), tensor(n))
         if not isinstance(neg_srcdst, Mapping):
-            neg_srcdst = {g.canonical_etypes[0]: neg_srcdst}
-        dtype = F.dtype(list(neg_srcdst.values())[0][0])
-        ctx = F.context(pair_graph)
+            neg_srcdst = {g.canonical_etypes[0]: neg_srcdst} # {('_N', '_E', '_N'): (tensor(n), tensor(n))}
+        dtype = F.dtype(list(neg_srcdst.values())[0][0]) # torch.int64
+        ctx = F.context(pair_graph) #  device(type='cpu')
         neg_edges = {
             etype: neg_srcdst.get(etype, (F.copy_to(F.tensor([], dtype), ctx),
                                         F.copy_to(F.tensor([], dtype), ctx)))
             for etype in g.canonical_etypes
-        }
+        } #  {('_N', '_E', '_N'): (tensor(n), tensor(n))}
         neg_pair_graph = heterograph(neg_edges, 
-            {ntype: g.number_of_nodes(ntype) for ntype in g.ntypes})
+            {ntype: g.number_of_nodes(ntype) for ntype in g.ntypes}) # {'_N': 274}
         
-        pair_graph, neg_pair_graph = transform.compact_graphs([pair_graph, neg_pair_graph])
+        # Remove nodes without degrees and relabel node id.
+        pair_graph, neg_pair_graph = transform.compact_graphs([pair_graph, neg_pair_graph]) 
         pair_graph.edata[dgl.EID] = induced_edges
-
         seed_nodes = pair_graph.ndata[dgl.NID]
 
         history_blocks = []
         for g_sampling in  history_gs:
+            # [[Block(num_src_nodes=274, num_dst_nodes=274, num_edges=674), Block(num_src_nodes=274, num_dst_nodes=274, num_edges=491)]]
             history_blocks.append(self.block_sampler.sample_blocks(
                 g_sampling, seed_nodes
             ))
         input_nodes = [blocks[0].srcdata[dgl.NID] for blocks in history_blocks]
 
         return input_nodes, pair_graph, neg_pair_graph, history_blocks
+
 
 class TemporalDataset(Dataset):
     def __init__(self, eids, years) -> None:

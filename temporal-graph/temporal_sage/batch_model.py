@@ -9,6 +9,7 @@ import dgl.nn as dglnn
 import dgl.function as fn
 import tqdm
 import torch
+from IPython import embed
 
 from model import DotProductPredictor
 
@@ -46,10 +47,9 @@ class BatchSAGE(nn.Module):
 
 
 class BatchModel(nn.Module):
-    def __init__(self, in_features, hidden_features, out_features):
+    def __init__(self, in_features, hidden_features, out_features, n_layers):
         super().__init__()
-        self.sage = BatchSAGE(in_features, hidden_features, out_features,
-        2, nn.ReLU(), 0.2)
+        self.sage = BatchSAGE(in_features, hidden_features, out_features, n_layers, nn.ReLU(), 0.2)
         self.lstm = nn.LSTM(out_features, out_features, 1)
         self.pred = DotProductPredictor()
         self.out_features = out_features
