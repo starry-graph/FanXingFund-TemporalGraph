@@ -78,7 +78,7 @@ temporal_sage
 
 ```
 pip install dgl-cu102==0.6.1
-python temporal_sage/temporal_sage.py --dataset fb-forum --num_ts 128 --epochs 50 --named_feats 1 2 3 4 5 6 --timespan_start 1095290000 --timespan_end 1096500000
+python temporal_sage/temporal_sage.py --dataset fb-forum --num_ts 128 --epochs 50 --named_feats 1 2 3 4 5 6 7 --timespan_start 1095290000 --timespan_end 1096500000
 ```
 
 #### TAP-GNN: Temporal Aggregation and Propagation GraphNeural Networks for Dynamic Representation
