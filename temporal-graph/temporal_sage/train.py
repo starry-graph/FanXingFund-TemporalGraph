@@ -72,10 +72,7 @@ def run(args):
 
 
 def config2args(config, args):
-    spaceId2dataset = {
-        '100001': 'fb-forum'
-    }
-    args.dataset = spaceId2dataset[ config['spaceId'] ]
+    args.dataset = config['spaceId']
     args.outfile_path = config['outFilePath']
     args.model_path = config['modelPath']
     args.feature_names = config['featureNames']
@@ -125,7 +122,7 @@ def train(config):
 if __name__ == '__main__':
     config = {
         "taskId": "585838793082061314TSN",
-        "spaceId": "100001",
+        "spaceId": "fb-forum",
         "outFilePath": "./saved_models/",
         "modelPath": "./saved_models/temp.pth",
         "featureNames":"属性A,属性B,属性C",
