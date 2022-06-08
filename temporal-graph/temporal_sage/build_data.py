@@ -7,6 +7,7 @@ import pickle as pkl
 from dgl.dataloading import negative_sampler
 from dgl.dataloading.neighbor import MultiLayerNeighborSampler
 from batch_loader import TemporalEdgeDataLoader
+import os
 
 
 def _load_data(dataset="ia-contact", mode="format_data", root_dir="./"):
@@ -32,6 +33,10 @@ def covert_to_dgl(args, edges, nodes):
     assert(min(edges['from_node_id'].min(), edges['to_node_id'].min()) == nodes['node_id'].min())
     assert(np.all(np.array(nodes['id_map'].tolist()) == np.arange(len(nodes))))
 
+    min_ts, max_ts = edges['timestamp'].min(), edges['timestamp'].max()
+    if not (min_ts <= args.timespan_start < max_ts and min_ts < args.timespan_end <= max_ts):
+        raise ValueError(f'startTime/endTime must be between {min_ts} and {max_ts}')
+
     node2nid = nodes.set_index('node_id').to_dict()['id_map']
     edges['src_nid'] = edges['from_node_id'].map(node2nid)
     edges['dst_nid'] = edges['to_node_id'].map(node2nid)
@@ -39,27 +44,27 @@ def covert_to_dgl(args, edges, nodes):
     graph = dgl.graph((torch.tensor(edges['src_nid']), torch.tensor(edges['dst_nid'])))
     graph.edata['ts']  = torch.tensor(edges['timestamp'])
     graph.ndata['feat'] = torch.from_numpy(np.eye(len(nodes))).to(torch.float) # one_hot
+    return graph
 
+
+def split_graph(args, logger, graph, num_ts, mode):
     ts_start, ts_end = args.timespan_start, args.timespan_end
-    eids = graph.filter_edges(lambda x: (x.data['ts']>= ts_start) & (x.data['ts'] < ts_end))
-    ts_graph = graph.edge_subgraph(eids, preserve_nodes=False)
-    return ts_graph
+    if mode == 'infer':
+        ts_start -= np.ceil((ts_end - ts_start) / num_ts)
+        num_ts += 1
+        logger.info(f'Inference needs one more history graph, so timespan:{args.timespan_start}->{ts_start}, num_ts:{num_ts-1}->{num_ts}')
 
-
-def split_graph(args, logger, graph, num_ts=128):
-    max_ts, min_ts = graph.edata['ts'].max().item(), graph.edata['ts'].min().item()
-    timespan = np.ceil((max_ts - min_ts) / num_ts)
-
-    logger.info(f'Split graph into {num_ts} snapshots.')
+    timespan = np.ceil((ts_end - ts_start) / num_ts)
+    logger.info(f'Split graph into {num_ts} snapshots between {ts_start} and {ts_end}, timespan is {timespan}.')
     graphs = []
 
     if args.temporal_feat:
-        spath = f'{args.root_dir}format_data/dblp-coauthors.nfeat.pkl'
+        spath = os.path.join(args.root_dir, 'format_data/dblp-coauthors.nfeat.pkl')
         logger.info(f'Loading temporal node feature from {spath}')
         node_feats = pkl.load(open(spath, 'rb'))
         
     for i in trange(num_ts):
-        ts_low = min_ts + i*timespan
+        ts_low = ts_start + i*timespan
         ts_high = ts_low + timespan
 
         eids = graph.filter_edges(lambda x: (x.data['ts']>= ts_low) & (x.data['ts'] < ts_high))
@@ -68,9 +73,10 @@ def split_graph(args, logger, graph, num_ts=128):
         if args.temporal_feat:
             ts_graph.ndata['feat'] = node_feats[int(ts_low)]
 
+        old_feat = ts_graph.ndata['feat']
         if 'all' not in args.named_feats:
             feat_select = []
-            old_feat = ts_graph.ndata['feat']
+            
             for dim in args.named_feats:
                 try:
                     dim = int(dim)
@@ -84,11 +90,11 @@ def split_graph(args, logger, graph, num_ts=128):
     return graphs
 
 
-def get_data(args, logger):
+def get_data(args, logger, mode):
     edges, nodes = load_data(dataset=args.dataset, mode="format", root_dir=args.root_dir)
     graph = covert_to_dgl(args, edges, nodes)
     logger.info('Graph %s.', str(graph))
-    coauthors = split_graph(args, logger, graph, num_ts=args.num_ts)
+    coauthors = split_graph(args, logger, graph, num_ts=args.num_ts, mode=mode)
 
     node_features = coauthors[0].ndata['feat']
     n_features = node_features.shape[1]

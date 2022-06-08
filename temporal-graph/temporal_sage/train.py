@@ -5,14 +5,17 @@ import pandas as pd
 import torch
 from tqdm import tqdm, trange
 import easydict
-
 from sklearn.metrics import f1_score, roc_auc_score, accuracy_score, average_precision_score
+from model import compute_loss
+
+from hdfs.client import Client
+import json
+
 from batch_model import BatchModel
-from model import Model, compute_loss, construct_negative_graph
-from util import (CSRA_PATH, DBLP_PATH, NOTE_PATH, EarlyStopMonitor,
-                  set_logger, set_random_seed, write_result)
+from util import set_logger
 from build_data import get_data
 from IPython import embed
+
 
 
 def train_model(args, model, train_loader, features, opt):
@@ -62,7 +65,7 @@ def train_model(args, model, train_loader, features, opt):
 
 def run(args):
     logger.info(f'Loading dataset {args.dataset} from {args.root_dir}')
-    train_loader, features, n_features, num_nodes, num_edges = get_data(args, logger)
+    train_loader, features, n_features, num_nodes, num_edges = get_data(args, logger, mode='train')
 
     model = BatchModel(n_features, args.n_hidden, args.embed_dim, args.n_layers).to(args.device)
     opt = torch.optim.Adam(model.parameters())
@@ -77,7 +80,7 @@ def config2args(config, args):
     args.model_path = config['modelPath']
     args.feature_names = config['featureNames']
     txt = config['flinkFeatureNames']
-    args.named_feats = [ord(s.lower())-ord('a') for s in txt if ord('A') <= ord(s) <=ord('z')]
+    args.named_feats = [ord(s.lower())-ord('a') for s in txt if ord('A') <= ord(s) <=ord('z')] if txt!='all' else 'all'
     args.timespan_start = int(config['startTime'])
     args.timespan_end = int(config['endTime'])
     args.root_dir = config['dataPath']
@@ -89,7 +92,7 @@ def train(config):
         'dataset': 'ia-contact', 
         'root_dir': './', 
         'prefix': 'TemporalSAGE', 
-        'epochs': 50, 
+        'epochs': 50,
         'bs': 1024, 
         'num_ts': 20,
         'n_hidden': 100, 
@@ -107,34 +110,41 @@ def train(config):
     args.device = torch.device('cuda:{}'.format(args.gpu))
     args = config2args(config, args)
     logger.info(args)
-
-    PARAM_STR = f'{args.epochs}-{args.bs}-{args.num_ts}-{args.n_hidden}'
-    PARAM_STR += f'-{args.embed_dim}-{args.n_layers}-{args.lr}'
-    PARAM_STR += f'-{args.temporal_feat}-{args.named_feats}'
-    SAVE_PATH = f'{args.prefix}-{PARAM_STR}-{args.timespan_start}-{args.timespan_end}-{args.dataset}'
     
-    args.rst_path = os.path.join(args.outfile_path, SAVE_PATH + '.result')
+    args.rst_path = os.path.join(args.outfile_path, 'train_metrics.csv')
 
     run(args)
     return args.outfile_path
 
 
-if __name__ == '__main__':
-    config = {
-        "taskId": "585838793082061314TSN",
-        "spaceId": "fb-forum",
-        "outFilePath": "./saved_models/",
-        "modelPath": "./saved_models/temp.pth",
-        "featureNames":"属性A,属性B,属性C",
-        "flinkFeatureNames":"属性A,属性D,属性E",
-        "startTime": "1095290000",
-        "endTime": "1096500000",
-        "trainTarget": 1,
-        "dataPath": "./",
-        "otherParam": "",
-        "labelName": "1",
-        "idIndex": "1"
-    }
+def get_config():
+    client = Client("http://192.168.1.13:9009")
+    lines = []
+    with client.read('/sxx/conf.json') as reader:
+        for line in reader:
+            lines.append(line)
+    lines_utf8 = [line.decode() for line in lines]
+    lines_replace = [line.replace('\xa0', '') for line in lines_utf8]
+    config = json.loads(''.join(lines_replace))
+    return config
 
+
+if __name__ == '__main__':
+    # config = {
+    #     "taskId": "585838793082061314TSN",
+    #     "spaceId": "dblp-coauthors",
+    #     "outFilePath": "./results/",
+    #     "modelPath": "./saved_models/dblp-coauthors_2epochs.pth",
+    #     "featureNames":"属性A,属性B,属性C",
+    #     "flinkFeatureNames":"属性A,属性D,属性E",
+    #     "startTime": "2000",
+    #     "endTime": "2020",
+    #     "trainTarget": 1,
+    #     "dataPath": "./",
+    #     "otherParam": "",
+    #     "labelName": "1",
+    #     "idIndex": "1"
+    # }
+    config = get_config()
     outfile_path = train(config)
     print('outfile_path: ', outfile_path)
