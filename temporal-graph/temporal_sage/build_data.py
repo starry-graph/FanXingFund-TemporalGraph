@@ -92,7 +92,7 @@ def split_graph(args, logger, graph, num_ts, mode):
 
     new_feat = graphs[0].ndata['feat']
     logger.info(f'Select these dims: {args.named_feats} and change node feats from {old_feat.shape} to {new_feat.shape}')
-    return graphs
+    return graphs, time_range
 
 
 def get_data(args, logger, mode):
