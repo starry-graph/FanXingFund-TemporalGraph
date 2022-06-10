@@ -8,7 +8,7 @@ pandas==1.1.5
 scikit-learn==0.22.1
 scipy==1.5.3
 six==1.15.0
-torch=1.5.1
+torch=1.8.0
 tqdm==4.36.1
 gpustat==0.6.0
 numba==0.53.1
