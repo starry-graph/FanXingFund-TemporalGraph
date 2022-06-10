@@ -9,6 +9,8 @@ from dgl.dataloading.neighbor import MultiLayerNeighborSampler
 from batch_loader import TemporalEdgeDataLoader
 import os
 
+from sampler import MyMultiLayerSampler
+
 
 def _load_data(dataset="ia-contact", mode="format_data", root_dir="./"):
     edges = pd.read_csv("{}/{}/{}.edges".format(root_dir, mode, dataset))
@@ -56,7 +58,7 @@ def split_graph(args, logger, graph, num_ts, mode):
 
     timespan = np.ceil((ts_end - ts_start) / num_ts)
     logger.info(f'Split graph into {num_ts} snapshots between {ts_start} and {ts_end}, timespan is {timespan}.')
-    graphs = []
+    graphs, time_range = [], []
 
     if args.temporal_feat:
         spath = os.path.join(args.root_dir, 'format_data/dblp-coauthors.nfeat.pkl')
@@ -84,7 +86,10 @@ def split_graph(args, logger, graph, num_ts, mode):
                     raise ValueError(f'--named_feats must be list(int), but {dim} is not a integer')
                 feat_select.append(old_feat[:, dim:dim+1])
             ts_graph.ndata['feat'] = torch.hstack(feat_select)
+
         graphs.append(ts_graph)
+        time_range.append((ts_low, ts_high))
+
     new_feat = graphs[0].ndata['feat']
     logger.info(f'Select these dims: {args.named_feats} and change node feats from {old_feat.shape} to {new_feat.shape}')
     return graphs
@@ -94,7 +99,7 @@ def get_data(args, logger, mode):
     edges, nodes = load_data(dataset=args.dataset, mode="format", root_dir=args.root_dir)
     graph = covert_to_dgl(args, edges, nodes)
     logger.info('Graph %s.', str(graph))
-    coauthors = split_graph(args, logger, graph, num_ts=args.num_ts, mode=mode)
+    coauthors, time_range = split_graph(args, logger, graph, num_ts=args.num_ts, mode=mode)
 
     node_features = coauthors[0].ndata['feat']
     n_features = node_features.shape[1]
@@ -103,10 +108,11 @@ def get_data(args, logger, mode):
     num_nodes = coauthors[0].number_of_nodes()
     num_edges = sum([g.number_of_edges() for g in coauthors])
 
-    sampler = MultiLayerNeighborSampler([15, 10])
+    # sampler = MultiLayerNeighborSampler([15, 10])
+    sampler = MyMultiLayerSampler([15, 10], num_nodes=num_nodes, cpp_file = args.cpp_file)
     neg_sampler = negative_sampler.Uniform(5)
     data_range = list(range(1, int(len(coauthors))))
-    data_loader = TemporalEdgeDataLoader(coauthors, data_range,
+    data_loader = TemporalEdgeDataLoader(coauthors, data_range, time_range, 
         sampler, negative_sampler=neg_sampler, batch_size=args.bs, shuffle=False,
         drop_last=False, num_workers=0)
     return data_loader, features, n_features, num_nodes, num_edges

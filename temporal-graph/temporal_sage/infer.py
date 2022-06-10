@@ -116,10 +116,11 @@ def infer(config):
         'named_feats': 'all', 
         'timespan_start': -np.inf, 
         'timespan_end': np.inf, 
+        'cpp_file': "./wart-servers/examples/sampler.wasm"
     })
 
     logger = set_logger()
-    args.device = torch.device('cuda:{}'.format(args.gpu))
+    args.device = torch.device(f'cuda:{args.gpu}') if torch.cuda.is_available() else torch.device('cpu')
     args = config2args(config, args)
     logger.info(args)
     

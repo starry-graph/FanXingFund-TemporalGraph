@@ -61,6 +61,60 @@ data_loader
 
 `python -m data_loader.data_unify -t [datastat|datasplit|datalabel]`
 
+
+
+### Wart-Servers
+
+环境配置：
+```
+# 安装rustup
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# 安装wasi-sdk >= 15.0
+wget "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-15/wasi-sdk-15.0-linux.tar.gz"
+tar xvf wasi-sdk-15.0-linux.tar.gz -C ${HOME}
+
+# 安装python环境
+pip install grpcio grpcio-tools pandas
+```
+
+启动采样服务器：
+```
+cd temporal-graph/
+git clone https://github.com/wjie98/wart-servers.git
+cd wart-servers/wart-worker
+
+# 编辑配置文件，修改端口
+vim config.yaml
+
+# 启动, 等待服务器运行
+cargo run --release --bin server config.yaml
+```
+
+编译
+```
+# 打开另一个终端
+cd temporal-graph/wart-servers/examples/
+../wasm/build.sh
+
+# 编辑编译文件 build.sh，修改 OUT_PATH="../../temporal_sage/rpc_client"
+# 生成python客户端
+cp rpc_client/ ../../temporal_sage/ -r
+./build.sh
+
+# 复制并编译采样脚本，生成二进制文件 sampler.wasm
+cp ../../temporal_sage/sampler.cpp ./
+./wacc sampler.cpp
+cd ../../
+```
+
+运行
+```
+python temporal_sage/train.py
+python temporal_sage/infer.py
+```
+
+
 ### Method
 
 #### Temporal GraphSAGE: a variant working on a sequence of graph snapshots
@@ -75,6 +129,7 @@ temporal_sage
 ├── temporal_sage.py
 └── util.py
 ```
+
 
 ```
 pip install dgl-cu102==0.6.1

@@ -3,12 +3,11 @@ import logging
 import random
 
 import dgl
-from dgl.dataloading import BlockSampler, EdgeCollator, EdgeDataLoader
+from dgl.dataloading import EdgeDataLoader
 import dgl.backend as F
 from dgl import transform
 from dgl.convert import heterograph
-from dgl.dataloading.dataloader import Collator
-import numpy as np
+
 import torch
 from torch.utils.data import DataLoader, Dataset
 from IPython import embed
@@ -24,7 +23,7 @@ class TemporalEdgeDataLoader(EdgeDataLoader):
     generated minibatch edges, and we return a list of MFGs corresponding to
     history graphs.
     """
-    def __init__(self, graphs, year_range, block_sampler, device='cpu', **kwargs):
+    def __init__(self, graphs, year_range, time_range, block_sampler, device='cpu', **kwargs):
         # We use full eids of each graph inside year_range for training/testing.
         # `mock_g` and `mock_eid` are only used for `EdgeDataLoader` initialization.
         mock_g = graphs[0]
@@ -32,6 +31,7 @@ class TemporalEdgeDataLoader(EdgeDataLoader):
         super().__init__(mock_g, mock_eid, block_sampler, device=device, **kwargs)
         self.graphs = graphs
         self.year_range = year_range
+        self.time_range = time_range
         self.sampler = block_sampler
         self.device = device
 
@@ -43,7 +43,7 @@ class TemporalEdgeDataLoader(EdgeDataLoader):
             else:
                 dataloader_kwargs[k] = v
 
-        self.collator = TemporalEdgeCollator(graphs, year_range, block_sampler, **collator_kwargs)
+        self.collator = TemporalEdgeCollator(graphs, year_range, time_range, block_sampler, **collator_kwargs)
 
         dataset = self.collator.dataset
         self.dataloader = DataLoader(dataset, collate_fn=self.collator.collate, **dataloader_kwargs)
@@ -56,11 +56,12 @@ class TemporalEdgeDataLoader(EdgeDataLoader):
 
 
 class TemporalEdgeCollator:
-    def __init__(self, graphs, year_range, block_sampler, history_window=1, negative_sampler=None):
+    def __init__(self, graphs, year_range, time_range, block_sampler, history_window=1, negative_sampler=None):
         super().__init__()
 
         self.graphs = graphs
         self.year_range = year_range
+        self.time_range = time_range
         eids = [graphs[year].edges('eid') for year in year_range] # [tensor(200), ..., tensor(200)]
         years = [torch.full(eid.shape, year).int() for year, eid in zip(year_range, eids)] # [tensor(200), ..., tensor(200)]
         eids = torch.cat(eids)
@@ -102,7 +103,8 @@ class TemporalEdgeCollator:
             years = years[years == min_year] # [n]
 
         start_year = min_year - self.history_window
-        history_gs = [self.graphs[i] for i in range(start_year, min_year)]
+        # history_gs = [self.graphs[i] for i in range(start_year, min_year)]
+        history_gs = [self.time_range[i] for i in range(start_year, min_year)]
         g = self.graphs[min_year]
 
         self.g = g
@@ -134,7 +136,8 @@ class TemporalEdgeCollator:
             years = years[years == min_year]
 
         start_year = min_year - self.history_window
-        history_gs = [self.graphs[i] for i in range(start_year, min_year)] # [Graph(num_nodes=274, num_edges=4442)]
+        # history_gs = [self.graphs[i] for i in range(start_year, min_year)] # [Graph(num_nodes=274, num_edges=4442)]
+        history_gs = [self.time_range[i] for i in range(start_year, min_year)]
         g = self.graphs[min_year] # Graph(num_nodes=274, num_edges=338)
 
         self.g = g
