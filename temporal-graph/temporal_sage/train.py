@@ -104,7 +104,7 @@ def train(config):
         'named_feats': 'all', 
         'timespan_start': -np.inf, 
         'timespan_end': np.inf, 
-        'cpp_file': "./wart-servers/examples/test.wasm"
+        'cpp_file': "./wart-servers/examples/sampler.wasm"
     })
 
     logger = set_logger()
