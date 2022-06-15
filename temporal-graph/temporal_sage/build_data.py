@@ -109,7 +109,7 @@ def get_data(args, logger, mode):
     num_edges = sum([g.number_of_edges() for g in coauthors])
 
     # sampler = MultiLayerNeighborSampler([15, 10])
-    sampler = MyMultiLayerSampler([15, 10], num_nodes=num_nodes, cpp_file = args.cpp_file)
+    sampler = MyMultiLayerSampler([15, 10], num_nodes=num_nodes, cpp_file = args.cpp_file, graph_name=args.dataset)
     neg_sampler = negative_sampler.Uniform(5)
     data_range = list(range(1, int(len(coauthors))))
     data_loader = TemporalEdgeDataLoader(coauthors, data_range, time_range, 

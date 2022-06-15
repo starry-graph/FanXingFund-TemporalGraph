@@ -3,12 +3,14 @@ import os
 import numpy as np
 import pandas as pd
 import torch
-from tqdm import tqdm, trange
+# from tqdm import tqdm, trange
 import easydict
 from sklearn.metrics import f1_score, roc_auc_score, accuracy_score, average_precision_score
 
 from hdfs.client import Client
 import json
+import urllib.parse as urlparse
+import pickle as pkl
 
 from batch_model import BatchModel
 from util import set_logger
@@ -18,12 +20,12 @@ from IPython import embed
 
 
 def infer_model(args, model, test_loader, features):
-    model.load_state_dict(torch.load(args.model_path))
     model.eval()
     y_probs, y_labels = [], []
     from_nodes, to_nodes, y_timespan = [], [], []
     with torch.no_grad():
-        for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(tqdm(test_loader, desc='infer')):
+        # for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(tqdm(test_loader, desc='infer')):
+        for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(test_loader):
             history_inputs = [nfeat[nodes].to(args.device) for nfeat, nodes in zip(features, input_nodes)]
             # batch_inputs = nfeats[input_nodes].to(device)
             pos_graph = pos_graph.to(args.device)
@@ -51,7 +53,6 @@ def infer_model(args, model, test_loader, features):
             cur_ts = cur_ts.repeat_interleave(neg_num)
             y_timespan.append(cur_ts.detach().cpu().numpy())
 
-
     y_prob = np.hstack([y.squeeze(1) for y in y_probs])
     y_pred = y_prob > 0.5
     y_label = np.hstack([y.squeeze(1) for y in y_labels])
@@ -63,13 +64,15 @@ def infer_model(args, model, test_loader, features):
 
     logger.info('Test ACC: %.4f, F1: %.4f, AP: %.4f, AUC: %.4f', acc, f1, ap, auc)
     df = pd.DataFrame({'ACC': [acc], 'F1': [f1], 'AP': [ap] ,'AUC': [auc]})
-    df.to_csv(args.rst_path, index=False)
+    with args.rst_client.write(args.rst_path, encoding='utf-8', overwrite=True) as writer:
+        df.to_csv(writer, index=False)
 
     from_nid = np.hstack([y for y in from_nodes])
     to_nid = np.hstack([y for y in to_nodes])
     y_ts = np.hstack([y for y in y_timespan])
     df = pd.DataFrame({'from_nid': from_nid, 'to_nid': to_nid, 'label': y_label ,'prob': y_prob, 'timestamp': y_ts})
-    df.to_csv(args.pred_path, index=False)
+    with args.rst_client.write(args.pred_path, encoding='utf-8', overwrite=True) as writer:
+        df.to_csv(writer, index=False)
 
     return args.outfile_path
 
@@ -80,7 +83,10 @@ def run(args):
 
     model = BatchModel(n_features, args.n_hidden, args.embed_dim, args.n_layers).to(args.device)
     logger.info(f'Loading model from {args.model_path}')
-    model.load_state_dict(torch.load(args.model_path, map_location=args.device))
+
+    with args.model_client.read(args.model_path) as reader:
+        model_dict = pkl.load(reader)
+    model.load_state_dict(model_dict)
     
     logger.info('Begin infering with %d nodes, %d edges.', num_nodes, num_edges)
     infer_model(args, model, test_loader, features)
@@ -92,7 +98,7 @@ def config2args(config, args):
     args.model_path = config['modelPath']
     args.feature_names = config['featureNames']
     txt = config['flinkFeatureNames']
-    args.named_feats = [ord(s.lower())-ord('a') for s in txt if ord('A') <= ord(s) <=ord('z')] if txt!='all' else 'all'
+    args.named_feats = 'all' # [ord(s.lower())-ord('a') for s in txt if ord('A') <= ord(s) <=ord('z')] if txt!='all' else 'all'
     args.timespan_start = int(config['startTime'])
     args.timespan_end = int(config['endTime'])
     args.root_dir = config['dataPath']
@@ -123,18 +129,38 @@ def infer(config):
     args.device = torch.device(f'cuda:{args.gpu}') if torch.cuda.is_available() else torch.device('cpu')
     args = config2args(config, args)
     logger.info(args)
+
+    # PARAM_STR = f'{args.epochs}-{args.bs}-{args.num_ts}-{args.n_hidden}'
+    # PARAM_STR += f'-{args.embed_dim}-{args.n_layers}-{args.lr}'
+    # PARAM_STR += f'-{args.temporal_feat}-{args.named_feats}'
+    # SAVE_PATH = f'{args.prefix}-{PARAM_STR}-{args.timespan_start}-{args.timespan_end}-{args.dataset}'
+    # SAVE_PATH = f'{args.dataset}'
     
-    args.pred_path = os.path.join(args.outfile_path, 'prediction.csv')
-    args.rst_path = os.path.join(args.outfile_path, 'infer_metrics.csv')
+    client_path, file_path = split_url(args.outfile_path)
+    args.rst_client = Client(client_path)
+    args.pred_path = os.path.join(file_path, 'prediction.csv')
+    args.rst_path = os.path.join(file_path, 'infer_metrics.csv')
+
+    client_path, args.model_path = split_url(args.model_path)
+    args.model_client = Client(client_path)
 
     run(args)
     return args.outfile_path
 
 
-def get_config():
-    client = Client("http://192.168.1.13:9009")
+def split_url(url):
+    uparse = urlparse.urlparse(url)
+    client_path = "http://" + uparse.netloc
+    file_path = uparse.path
+    return client_path, file_path
+
+
+def get_config(url):
+    client_path, config_path = split_url(url)
+
+    client = Client(client_path)
     lines = []
-    with client.read('/sxx/conf.json') as reader:
+    with client.read(config_path) as reader:
         for line in reader:
             lines.append(line)
     lines_utf8 = [line.decode() for line in lines]
@@ -144,15 +170,19 @@ def get_config():
 
 
 if __name__ == '__main__':
+    config = get_config('http://192.168.1.13:9009/sxx/conf.json')
+    print(config)
     # config = {
     #     "taskId": "585838793082061314TSN",
-    #     "spaceId": "dblp-coauthors",
-    #     "outFilePath": "./results/",
-    #     "modelPath": "./saved_models/dblp-coauthors_2epochs.pth",
+    #     "spaceId": "DBLPV13",
+    #     # "outFilePath": "./saved_models/",
+    #     "outFilePath": "http://192.168.1.13:9009/dev/pytorch/infer-93B9AE168267/",
+    #     # "modelPath": "./saved_models/dblp-coauthors_2epochs.pth",
+    #     "modelPath": "http://192.168.1.13:9009/dev/pytorch/train-4FB003D56AAC/train-4FB003D56AAC.pth",
     #     "featureNames":"属性A,属性B,属性C",
     #     "flinkFeatureNames":"属性A,属性D,属性E",
     #     "startTime": "2001",
-    #     "endTime": "2021",
+    #     "endTime": "2003",
     #     "trainTarget": 1,
     #     "dataPath": "./",
     #     "otherParam": "",
@@ -160,6 +190,5 @@ if __name__ == '__main__':
     #     "idIndex": "1"
     # }
 
-    config = get_config()
     outfile_path = infer(config)
     print('outfile_path: ', outfile_path)

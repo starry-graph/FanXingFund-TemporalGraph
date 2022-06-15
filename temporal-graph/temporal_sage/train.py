@@ -10,6 +10,8 @@ from model import compute_loss
 
 from hdfs.client import Client
 import json
+import urllib.parse as urlparse
+import pickle as pkl
 
 from batch_model import BatchModel
 from util import set_logger
@@ -22,7 +24,8 @@ def train_model(args, model, train_loader, features, opt):
     for epoch in range(args.epochs):
         loss_avg, y_probs, y_labels = 0, [], []
         model.train()
-        batch_bar = tqdm(train_loader, desc='train')
+        # batch_bar = tqdm(train_loader, desc='train')
+        batch_bar = train_loader
         for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(batch_bar):
             history_inputs = [nfeat[nodes].to(args.device) for nfeat, nodes in zip(features, input_nodes)]
             # batch_inputs = nfeats[input_nodes].to(device)
@@ -43,7 +46,8 @@ def train_model(args, model, train_loader, features, opt):
             y_probs.append(neg_score.detach().cpu().numpy())
             y_labels.append(np.zeros_like(y_probs[-1]))
 
-            batch_bar.set_postfix(loss=round(loss.item(), 4))
+            # batch_bar.set_postfix(loss=round(loss.item(), 4))
+
         loss_avg /= len(train_loader)
         y_prob = np.hstack([y.squeeze(1) for y in y_probs])
         y_pred = y_prob > 0.5
@@ -57,10 +61,13 @@ def train_model(args, model, train_loader, features, opt):
             epoch, loss_avg, acc, f1, ap, auc)
 
     df = pd.DataFrame({'Loss': [loss_avg], 'ACC': [acc], 'F1': [f1], 'AP': [ap] ,'AUC': [auc]})
-    df.to_csv(args.rst_path, index=False)
+    with args.rst_client.write(args.rst_path, encoding='utf-8', overwrite=True) as writer:
+        df.to_csv(writer, index=False)
 
     logger.info(f'Saving model at {args.model_path}')
-    torch.save(model.state_dict(), args.model_path)
+    with args.model_client.write(args.model_path, overwrite=True) as writer:
+        pkl.dump(model.state_dict(), writer)
+
 
 
 def run(args):
@@ -80,7 +87,7 @@ def config2args(config, args):
     args.model_path = config['modelPath']
     args.feature_names = config['featureNames']
     txt = config['flinkFeatureNames']
-    args.named_feats = [ord(s.lower())-ord('a') for s in txt if ord('A') <= ord(s) <=ord('z')] if txt!='all' else 'all'
+    args.named_feats = 'all' #[ord(s.lower())-ord('a') for s in txt if ord('A') <= ord(s) <=ord('z')] if txt!='all' else 'all'
     args.timespan_start = int(config['startTime'])
     args.timespan_end = int(config['endTime'])
     args.root_dir = config['dataPath']
@@ -92,12 +99,12 @@ def train(config):
         'dataset': 'ia-contact', 
         'root_dir': './', 
         'prefix': 'TemporalSAGE', 
-        'epochs': 50,
+        'epochs': 1, 
         'bs': 1024, 
         'num_ts': 20,
         'n_hidden': 100, 
         'embed_dim': 100, 
-        'n_layers': 2, 
+        'n_layers': 2,
         'gpu': 0, 
         'lr': 1e-2, 
         'temporal_feat': False, 
@@ -109,19 +116,39 @@ def train(config):
 
     logger = set_logger()
     args.device = torch.device(f'cuda:{args.gpu}') if torch.cuda.is_available() else torch.device('cpu')
+    print(args.device)
     args = config2args(config, args)
     logger.info(args)
+
+    # PARAM_STR = f'{args.epochs}-{args.bs}-{args.num_ts}-{args.n_hidden}'
+    # PARAM_STR += f'-{args.embed_dim}-{args.n_layers}-{args.lr}'
+    # PARAM_STR += f'-{args.temporal_feat}-{args.named_feats}'
+    # SAVE_PATH = f'{args.prefix}-{PARAM_STR}-{args.timespan_start}-{args.timespan_end}-{args.dataset}'
     
-    args.rst_path = os.path.join(args.outfile_path, 'train_metrics.csv')
+    client_path, file_path = split_url(args.outfile_path)
+    args.rst_client = Client(client_path)
+    args.rst_path = os.path.join(file_path, 'train_metrics.csv')
+
+    client_path, args.model_path = split_url(args.model_path)
+    args.model_client = Client(client_path)
 
     run(args)
     return args.outfile_path
 
 
-def get_config():
-    client = Client("http://192.168.1.13:9009")
+def split_url(url):
+    uparse = urlparse.urlparse(url)
+    client_path = "http://" + uparse.netloc
+    file_path = uparse.path
+    return client_path, file_path
+    
+
+def get_config(url):
+    client_path, config_path = split_url(url)
+
+    client = Client(client_path)
     lines = []
-    with client.read('/sxx/conf.json') as reader:
+    with client.read(config_path) as reader:
         for line in reader:
             lines.append(line)
     lines_utf8 = [line.decode() for line in lines]
@@ -131,21 +158,25 @@ def get_config():
 
 
 if __name__ == '__main__':
+    config = get_config('http://192.168.1.13:9009/sxx/conf.json')
+    print(config)
     # config = {
     #     "taskId": "585838793082061314TSN",
-    #     "spaceId": "dblp-coauthors",
-    #     "outFilePath": "./results/",
-    #     "modelPath": "./saved_models/dblp-coauthors_2epochs.pth",
+    #     # "spaceId": "dblp-coauthors",
+    #     "spaceId": "DBLPV13",
+    #     # "outFilePath": "./results/",
+    #     # "modelPath": "./saved_models/dblp-coauthors_2epochs.pth",
+    #     "outFilePath": "http://192.168.1.13:9009/dev/pytorch/train-4FB003D56AAC/",
+	#     "modelPath": "http://192.168.1.13:9009/dev/pytorch/train-4FB003D56AAC/train-4FB003D56AAC.pth",
     #     "featureNames":"属性A,属性B,属性C",
     #     "flinkFeatureNames":"属性A,属性D,属性E",
-    #     "startTime": "2000",
-    #     "endTime": "2020",
+    #     "startTime": "2001",
+    #     "endTime": "2003",
     #     "trainTarget": 1,
     #     "dataPath": "./",
     #     "otherParam": "",
     #     "labelName": "1",
     #     "idIndex": "1"
     # }
-    config = get_config()
     outfile_path = train(config)
     print('outfile_path: ', outfile_path)

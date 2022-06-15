@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# wart-servers
+temporal-graph/temporal_sage/rpc_client
