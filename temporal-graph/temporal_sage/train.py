@@ -12,6 +12,7 @@ from hdfs.client import Client
 import json
 import urllib.parse as urlparse
 import pickle as pkl
+import argparse
 
 from batch_model import BatchModel
 from util import set_logger
@@ -99,7 +100,7 @@ def train(config):
         'dataset': 'ia-contact', 
         'root_dir': './', 
         'prefix': 'TemporalSAGE', 
-        'epochs': 1, 
+        'epochs': 50, 
         'bs': 1024, 
         'num_ts': 20,
         'n_hidden': 100, 
@@ -158,7 +159,11 @@ def get_config(url):
 
 
 if __name__ == '__main__':
-    config = get_config('http://192.168.1.13:9009/sxx/conf.json')
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", "-c", type=str, default='http://192.168.1.13:9009/sxx/conf.json')
+    args = parser.parse_args()
+
+    config = get_config(args.config)
     print(config)
     # config = {
     #     "taskId": "585838793082061314TSN",
