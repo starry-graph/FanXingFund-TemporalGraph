@@ -102,7 +102,7 @@ def config2args(config, args):
     args.named_feats = 'all' # [ord(s.lower())-ord('a') for s in txt if ord('A') <= ord(s) <=ord('z')] if txt!='all' else 'all'
     args.timespan_start = int(config['startTime'])
     args.timespan_end = int(config['endTime'])
-    args.root_dir = config['dataPath']
+    # args.root_dir = config['dataPath']
     return args
 
 
