@@ -9,7 +9,6 @@ import dgl.nn as dglnn
 import dgl.function as fn
 import tqdm
 import torch
-from IPython import embed
 
 from model import DotProductPredictor
 
