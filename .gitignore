@@ -1,4 +1,6 @@
+**/.vscode/**
 **/format_data/dblp**
+temporal-graph/wart-servers
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

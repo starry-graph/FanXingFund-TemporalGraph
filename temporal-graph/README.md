@@ -63,9 +63,11 @@ data_loader
 
 
 
-### Wart-Servers
+### 配置采样算子的TemporalSAGE
 
-环境配置：
+#### Wart-Servers
+
+- 环境配置：
 ```
 # 安装rustup
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -78,7 +80,7 @@ tar xvf wasi-sdk-15.0-linux.tar.gz -C ${HOME}
 pip install grpcio grpcio-tools pandas
 ```
 
-启动采样服务器：
+- 启动采样服务器：
 ```
 cd temporal-graph/
 git clone https://github.com/wjie98/wart-servers.git
@@ -91,7 +93,7 @@ vim config.yaml
 cargo run --release --bin server config.yaml
 ```
 
-编译
+- 编译
 ```
 # 打开另一个终端
 cd temporal-graph/wart-servers/examples/
@@ -108,21 +110,21 @@ cp ../../temporal_sage/sampler.cpp ./
 cd ../../
 ```
 
-运行
+#### 运行TemporalSAGE
 
-Ensure dgl < 0.8.0
+- Ensure dgl < 0.8.0
 ```
 pip install dgl-cu111==0.6.1
 # or pip install dgl-cu102==0.6.1
 ```
 
-Use wart-Servers sampler:
+- Use wart-Servers sampler:
 ```
 python temporal_sage/train.py -c http://192.168.1.13:9009/sxx/conf.json
 python temporal_sage/infer.py -c http://192.168.1.13:9009/sxx/conf.json
 ```
 
-Use dgl sampler:
+- Use dgl sampler:
 ```
 python temporal_sage/train.py -c http://192.168.1.13:9009/sxx/conf.json --dgl_sampler
 python temporal_sage/infer.py -c http://192.168.1.13:9009/sxx/conf.json --dgl_sampler
