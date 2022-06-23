@@ -5,7 +5,6 @@ import dgl
 from tqdm import trange
 import pickle as pkl
 from dgl.dataloading import negative_sampler
-from dgl.dataloading.neighbor import MultiLayerNeighborSampler
 from batch_loader import TemporalEdgeDataLoader
 import os
 
@@ -108,11 +107,19 @@ def get_data(args, logger, mode):
     num_nodes = coauthors[0].number_of_nodes()
     num_edges = sum([g.number_of_edges() for g in coauthors])
 
-    # sampler = MultiLayerNeighborSampler([15, 10])
-    sampler = MyMultiLayerSampler([15, 10], num_nodes=num_nodes, cpp_file = args.cpp_file, graph_name=args.dataset)
+    if args.dgl_sampler:
+        if dgl.__version__ > '0.8.0':
+            from dgl.dataloading import NeighborSampler
+            sampler = NeighborSampler([15, 10])
+        else:
+            from dgl.dataloading.neighbor import MultiLayerNeighborSampler
+            sampler = MultiLayerNeighborSampler([15, 10])
+    else:
+        sampler = MyMultiLayerSampler([15, 10], num_nodes=num_nodes, cpp_file = args.cpp_file, graph_name=args.dataset)
+
     neg_sampler = negative_sampler.Uniform(5)
     data_range = list(range(1, int(len(coauthors))))
-    data_loader = TemporalEdgeDataLoader(coauthors, data_range, time_range, 
+    data_loader = TemporalEdgeDataLoader(args.dgl_sampler, coauthors, data_range, time_range, 
         sampler, negative_sampler=neg_sampler, batch_size=args.bs, shuffle=False,
         drop_last=False, num_workers=0)
     return data_loader, features, n_features, num_nodes, num_edges

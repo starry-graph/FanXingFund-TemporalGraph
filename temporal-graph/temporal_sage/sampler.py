@@ -5,7 +5,10 @@ import numpy as np
 import pandas as pd
 import torch
 import dgl
-from dgl.dataloading import transform
+if dgl.__version__ > '0.8.0':
+    import dgl as transform
+else:
+    from dgl.dataloading import transform
 
 from typing import *
 
@@ -54,19 +57,21 @@ def streaming_run_iter(token: str, args_lst: List[List[str]]):
 
 
 class MyMultiLayerSampler:   
-    def __init__(self, fanouts, num_nodes, cpp_file = "./test.wasm", graph_name='DBLPV13'):
+    def __init__(self, fanouts, num_nodes, client_address = "192.168.1.11:6068", \
+        cpp_file = "./sampler.wasm", graph_name='DBLPV13'):
         with open(cpp_file, "rb") as f: # 获取编译好的wasm字节码
             program = f.read()
 
-        channel = grpc.insecure_channel("[::1]:6067") # 连接采样服务器
+        channel = grpc.insecure_channel(client_address) # 连接采样服务器
         self.stub = WartWorkerStub(channel) # 创建采样客户端
 
         # 启动采样session，设置图空间名称，上传采样脚本
         resp = self.stub.OpenSession(OpenSessionRequest(
             space_name = f"nebula:{graph_name}",
             program = program,
-            io_timeout = 1000, # 单次IO限时(废弃)
-            ex_timeout = 2000, # 单次采样限时
+            # io_timeout = 1000, # 单次IO限时(废弃)
+            ex_timeout = 5000, # 单次采样限时
+            parallel = 64 # 并行执行
         ))
         self.token = resp.ok.token # 获得session的token
 
@@ -87,7 +92,7 @@ class MyMultiLayerSampler:
         seed_nodes = seed_nodes.tolist() if isinstance(seed_nodes, torch.Tensor) else seed_nodes
         args = [ [str(item)] for item in seed_nodes]
         cnt = 0
-        for resp in self.stub.StreamingRun(streaming_run_iter(self.token, args)):
+        for i, resp in enumerate(self.stub.StreamingRun(streaming_run_iter(self.token, args))):
             tb = self.fetch_neighbors(resp)
             try:
                 df = tb[(tb.time_stamp >= year_range[0]) & (tb.time_stamp < year_range[1])]
@@ -107,6 +112,9 @@ class MyMultiLayerSampler:
             src_l.append(srcs)
             tgt_l.append(tgts)
             ts_l.append(ts)
+            
+            if i == len(args) - 1:
+                break
         
         src_edge = [] if src_l == [] else torch.tensor(np.hstack(src_l)).to(torch.int64)
         tgt_edge = [] if src_l == [] else torch.tensor(np.hstack(tgt_l)).to(torch.int64)

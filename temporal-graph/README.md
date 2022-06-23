@@ -109,11 +109,24 @@ cd ../../
 ```
 
 运行
+
+Ensure dgl < 0.8.0
 ```
-python temporal_sage/train.py
-python temporal_sage/infer.py
+pip install dgl-cu111==0.6.1
+# or pip install dgl-cu102==0.6.1
 ```
 
+Use wart-Servers sampler:
+```
+python temporal_sage/train.py -c http://192.168.1.13:9009/sxx/conf.json
+python temporal_sage/infer.py -c http://192.168.1.13:9009/sxx/conf.json
+```
+
+Use dgl sampler:
+```
+python temporal_sage/train.py -c http://192.168.1.13:9009/sxx/conf.json --dgl_sampler
+python temporal_sage/infer.py -c http://192.168.1.13:9009/sxx/conf.json --dgl_sampler
+```
 
 ### Method
 

@@ -102,6 +102,7 @@ def config2args(config, args):
     args.named_feats = 'all' # [ord(s.lower())-ord('a') for s in txt if ord('A') <= ord(s) <=ord('z')] if txt!='all' else 'all'
     args.timespan_start = int(config['startTime'])
     args.timespan_end = int(config['endTime'])
+    args.dgl_sampler = config['dgl_sampler']
     # args.root_dir = config['dataPath']
     return args
 
@@ -173,6 +174,7 @@ def get_config(url):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", type=str, default='http://192.168.1.13:9009/sxx/conf.json')
+    parser.add_argument("--dgl_sampler", "-s", action='store_true')
     args = parser.parse_args()
 
     config = get_config(args.config)
@@ -194,6 +196,7 @@ if __name__ == '__main__':
     #     "labelName": "1",
     #     "idIndex": "1"
     # }
+    config['dgl_sampler'] = args.dgl_sampler
 
     outfile_path = infer(config)
     print('outfile_path: ', outfile_path)

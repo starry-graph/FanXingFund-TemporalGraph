@@ -5,7 +5,10 @@ import random
 import dgl
 from dgl.dataloading import EdgeDataLoader
 import dgl.backend as F
-from dgl import transform
+if dgl.__version__ > '0.8.0':
+    import dgl as transform
+else:
+    from dgl.dataloading import transform
 from dgl.convert import heterograph
 
 import torch
@@ -23,7 +26,7 @@ class TemporalEdgeDataLoader(EdgeDataLoader):
     generated minibatch edges, and we return a list of MFGs corresponding to
     history graphs.
     """
-    def __init__(self, graphs, year_range, time_range, block_sampler, device='cpu', **kwargs):
+    def __init__(self, dgl_sampler, graphs, year_range, time_range, block_sampler, device='cpu', **kwargs):
         # We use full eids of each graph inside year_range for training/testing.
         # `mock_g` and `mock_eid` are only used for `EdgeDataLoader` initialization.
         mock_g = graphs[0]
@@ -43,7 +46,7 @@ class TemporalEdgeDataLoader(EdgeDataLoader):
             else:
                 dataloader_kwargs[k] = v
 
-        self.collator = TemporalEdgeCollator(graphs, year_range, time_range, block_sampler, **collator_kwargs)
+        self.collator = TemporalEdgeCollator(dgl_sampler, graphs, year_range, time_range, block_sampler, **collator_kwargs)
 
         dataset = self.collator.dataset
         self.dataloader = DataLoader(dataset, collate_fn=self.collator.collate, **dataloader_kwargs)
@@ -56,7 +59,7 @@ class TemporalEdgeDataLoader(EdgeDataLoader):
 
 
 class TemporalEdgeCollator:
-    def __init__(self, graphs, year_range, time_range, block_sampler, history_window=1, negative_sampler=None):
+    def __init__(self, dgl_sampler, graphs, year_range, time_range, block_sampler, history_window=1, negative_sampler=None):
         super().__init__()
 
         self.graphs = graphs
@@ -76,6 +79,7 @@ class TemporalEdgeCollator:
         self.history_window = history_window
         self.logger = logging.getLogger('TemporalEdgeCollator')
         self.warning = True
+        self.dgl_sampler = dgl_sampler
     
     @property
     def dataset(self):
@@ -103,8 +107,10 @@ class TemporalEdgeCollator:
             years = years[years == min_year] # [n]
 
         start_year = min_year - self.history_window
-        # history_gs = [self.graphs[i] for i in range(start_year, min_year)]
-        history_gs = [self.time_range[i] for i in range(start_year, min_year)]
+        if self.dgl_sampler:
+            history_gs = [self.graphs[i] for i in range(start_year, min_year)]
+        else:
+            history_gs = [self.time_range[i] for i in range(start_year, min_year)]
         g = self.graphs[min_year]
 
         self.g = g
@@ -136,8 +142,11 @@ class TemporalEdgeCollator:
             years = years[years == min_year]
 
         start_year = min_year - self.history_window
-        # history_gs = [self.graphs[i] for i in range(start_year, min_year)] # [Graph(num_nodes=274, num_edges=4442)]
-        history_gs = [self.time_range[i] for i in range(start_year, min_year)]
+        if self.dgl_sampler:
+            history_gs = [self.graphs[i] for i in range(start_year, min_year)] # [Graph(num_nodes=274, num_edges=4442)]
+        else:
+            history_gs = [self.time_range[i] for i in range(start_year, min_year)]
+        
         g = self.graphs[min_year] # Graph(num_nodes=274, num_edges=338)
 
         self.g = g
