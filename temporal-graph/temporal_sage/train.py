@@ -168,7 +168,7 @@ def get_config(url):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", "-c", type=str, default='http://192.168.1.13:9009/sxx/conf.json')
+    parser.add_argument("--config", "-c", type=str, default=' http://192.168.1.13:9009/dev/conf/train.json')
     parser.add_argument("--dgl_sampler", "-s", action='store_true')
     args = parser.parse_args()
 
