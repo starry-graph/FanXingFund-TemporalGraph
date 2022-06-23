@@ -2,6 +2,7 @@ from asyncio.log import logger
 import os
 import numpy as np
 import pandas as pd
+import time
 import torch
 from tqdm import tqdm, trange
 import easydict
@@ -17,7 +18,6 @@ import argparse
 from batch_model import BatchModel
 from util import set_logger
 from build_data import get_data
-from IPython import embed
 
 
 
@@ -27,7 +27,9 @@ def train_model(args, model, train_loader, features, opt):
         model.train()
         # batch_bar = tqdm(train_loader, desc='train')
         batch_bar = train_loader
+        epoch_start = time.time()
         for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(batch_bar):
+            batch_start = time.time()
             history_inputs = [nfeat[nodes].to(args.device) for nfeat, nodes in zip(features, input_nodes)]
             # batch_inputs = nfeats[input_nodes].to(device)
             pos_graph = pos_graph.to(args.device)
@@ -48,7 +50,11 @@ def train_model(args, model, train_loader, features, opt):
             y_labels.append(np.zeros_like(y_probs[-1]))
 
             # batch_bar.set_postfix(loss=round(loss.item(), 4))
+            batch_time = time.time() - batch_start
+            print('\r Current batch: {}/{} costs {:.2f} seconds.'.format(str(step).zfill(4), len(batch_bar), batch_time), end='')
 
+        epoch_time = time.time() - epoch_start
+        print('\n Epoch {:03d} costs {:.2f} seconds.'.format(epoch, epoch_time))
         loss_avg /= len(train_loader)
         y_prob = np.hstack([y.squeeze(1) for y in y_probs])
         y_pred = y_prob > 0.5
@@ -101,7 +107,7 @@ def train(config):
         'dataset': 'ia-contact', 
         'root_dir': './', 
         'prefix': 'TemporalSAGE', 
-        'epochs': 50, 
+        'epochs': 2, 
         'bs': 1024, 
         'num_ts': 20,
         'n_hidden': 100, 

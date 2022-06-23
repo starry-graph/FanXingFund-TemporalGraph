@@ -2,6 +2,7 @@ from asyncio.log import logger
 import os
 import numpy as np
 import pandas as pd
+import time
 import torch
 # from tqdm import tqdm, trange
 import easydict
@@ -16,7 +17,6 @@ import argparse
 from batch_model import BatchModel
 from util import set_logger
 from build_data import get_data
-from IPython import embed
 
 
 
@@ -24,9 +24,11 @@ def infer_model(args, model, test_loader, features):
     model.eval()
     y_probs, y_labels = [], []
     from_nodes, to_nodes, y_timespan = [], [], []
+    test_start = time.time()
     with torch.no_grad():
         # for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(tqdm(test_loader, desc='infer')):
         for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(test_loader):
+            batch_start = time.time()
             history_inputs = [nfeat[nodes].to(args.device) for nfeat, nodes in zip(features, input_nodes)]
             # batch_inputs = nfeats[input_nodes].to(device)
             pos_graph = pos_graph.to(args.device)
@@ -54,6 +56,9 @@ def infer_model(args, model, test_loader, features):
             cur_ts = cur_ts.repeat_interleave(neg_num)
             y_timespan.append(cur_ts.detach().cpu().numpy())
 
+            batch_time = time.time() - batch_start
+            print('\r Current batch: {}/{} costs {:.2f} seconds.'.format(str(step).zfill(4), len(test_loader), batch_time), end='')
+
     y_prob = np.hstack([y.squeeze(1) for y in y_probs])
     y_pred = y_prob > 0.5
     y_label = np.hstack([y.squeeze(1) for y in y_labels])
@@ -63,6 +68,8 @@ def infer_model(args, model, test_loader, features):
     auc = roc_auc_score(y_label, y_prob)
     f1 = f1_score(y_label, y_pred)
 
+    test_time = time.time() - test_start
+    print('Test costs {:.2f} seconds.'.format(test_time))
     logger.info('Test ACC: %.4f, F1: %.4f, AP: %.4f, AUC: %.4f', acc, f1, ap, auc)
     df = pd.DataFrame({'ACC': [acc], 'F1': [f1], 'AP': [ap] ,'AUC': [auc]})
     with args.rst_client.write(args.rst_path, encoding='utf-8', overwrite=True) as writer:
