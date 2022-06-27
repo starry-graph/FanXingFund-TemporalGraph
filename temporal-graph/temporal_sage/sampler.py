@@ -146,7 +146,7 @@ class MyMultiLayerSampler:
 
 
 if __name__ == '__main__':
-    sampler = MyMultiLayerSampler([15, 10], num_nodes=36288, cpp_file = "../../wart-servers/examples/test.wasm")
+    sampler = MyMultiLayerSampler([15, 10], num_nodes=36288, cpp_file = "../wart-servers/examples/sampler.wasm")
     
     # ret = sampler.sample_neighbors((0, 9999), [24004], fanout=15)
     # print(ret)

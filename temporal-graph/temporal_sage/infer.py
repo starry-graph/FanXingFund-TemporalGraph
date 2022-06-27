@@ -121,7 +121,7 @@ def infer(config):
         'prefix': 'TemporalSAGE', 
         'epochs': 50, 
         'bs': 1024, 
-        'num_ts': 20,
+        'num_ts': 19,
         'n_hidden': 100, 
         'embed_dim': 100, 
         'n_layers': 2, 
@@ -180,7 +180,7 @@ def get_config(url):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", "-c", type=str, default=' http://192.168.1.13:9009/dev/conf/infer.json')
+    parser.add_argument("--config", "-c", type=str, default='http://192.168.1.13:9009/dev/conf/infer.json')
     parser.add_argument("--dgl_sampler", "-s", action='store_true')
     args = parser.parse_args()
 
