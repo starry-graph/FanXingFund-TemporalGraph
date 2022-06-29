@@ -90,14 +90,16 @@ def run(args):
 
 
 def config2args(config, args):
-    args.dataset = config['spaceId']
+    # args.dataset = config['spaceId']
     args.outfile_path = config['outFilePath']
     args.model_path = config['modelPath']
     args.feature_names = config['featureNames']
     txt = config['flinkFeatureNames']
     args.named_feats = 'all' #[ord(s.lower())-ord('a') for s in txt if ord('A') <= ord(s) <=ord('z')] if txt!='all' else 'all'
-    args.timespan_start = int(config['startTime'])
-    args.timespan_end = int(config['endTime'])
+    # args.timespan_start = int(config['startTime'])
+    # args.timespan_end = int(config['endTime'])
+    args.timespan_start = 20733
+    args.timespan_end = 364094
     args.dgl_sampler = config['dgl_sampler']
     # args.root_dir = config['dataPath']
     return args
@@ -105,7 +107,7 @@ def config2args(config, args):
 
 def train(config):
     args = easydict.EasyDict({
-        'dataset': 'ia-contact', 
+        'dataset': 'ia_contact', 
         'root_dir': './', 
         'prefix': 'TemporalSAGE', 
         'epochs': 2, 
