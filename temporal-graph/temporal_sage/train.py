@@ -28,8 +28,8 @@ def train_model(args, model, train_loader, features, opt):
         # batch_bar = tqdm(train_loader, desc='train')
         batch_bar = train_loader
         epoch_start = time.time()
+        batch_start = time.time()
         for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(batch_bar):
-            batch_start = time.time()
             history_inputs = [nfeat[nodes].to(args.device) for nfeat, nodes in zip(features, input_nodes)]
             # batch_inputs = nfeats[input_nodes].to(device)
             pos_graph = pos_graph.to(args.device)
@@ -51,6 +51,7 @@ def train_model(args, model, train_loader, features, opt):
 
             # batch_bar.set_postfix(loss=round(loss.item(), 4))
             batch_time = time.time() - batch_start
+            batch_start = time.time()
             print('\r Current batch: {}/{} costs {:.2f} seconds.'.format(str(step).zfill(4), len(batch_bar), batch_time), end='')
 
         epoch_time = time.time() - epoch_start

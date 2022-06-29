@@ -27,8 +27,8 @@ def infer_model(args, model, test_loader, features):
     test_start = time.time()
     with torch.no_grad():
         # for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(tqdm(test_loader, desc='infer')):
+        batch_start = time.time()
         for step, (input_nodes, pos_graph, neg_graph, history_blocks) in enumerate(test_loader):
-            batch_start = time.time()
             history_inputs = [nfeat[nodes].to(args.device) for nfeat, nodes in zip(features, input_nodes)]
             # batch_inputs = nfeats[input_nodes].to(device)
             pos_graph = pos_graph.to(args.device)
@@ -57,6 +57,7 @@ def infer_model(args, model, test_loader, features):
             y_timespan.append(cur_ts.detach().cpu().numpy())
 
             batch_time = time.time() - batch_start
+            batch_start = time.time()
             print('\r Current batch: {}/{} costs {:.2f} seconds.'.format(str(step).zfill(4), len(test_loader), batch_time), end='')
 
     y_prob = np.hstack([y.squeeze(1) for y in y_probs])

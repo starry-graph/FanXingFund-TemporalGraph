@@ -57,7 +57,7 @@ def streaming_run_iter(token: str, args_lst: List[List[str]]):
 
 
 class MyMultiLayerSampler:   
-    def __init__(self, fanouts, num_nodes, client_address = "192.168.1.11:6068", \
+    def __init__(self, fanouts, num_nodes, client_address = "192.168.1.11:6066", \
         cpp_file = "./sampler.wasm", graph_name='DBLPV13'):
         with open(cpp_file, "rb") as f: # 获取编译好的wasm字节码
             program = f.read()
