@@ -78,7 +78,14 @@ class MyMultiLayerSampler:
         self.fanouts = fanouts
         self.num_layer = len(fanouts)
         self.num_nodes = num_nodes
+
+        self.clear_resp_metrics()
     
+    def clear_resp_metrics(self):
+        self.resp_start_times = []
+        self.resp_end_times = []
+        self.resp_query_counts = []
+        self.resp_node_counts = []
 
     def fetch_neighbors(self, resp):
         # 将采样服务器的返回值转换为邻居节点
@@ -93,6 +100,13 @@ class MyMultiLayerSampler:
         args = [ [str(item)] for item in seed_nodes]
         cnt = 0
         for i, resp in enumerate(self.stub.StreamingRun(streaming_run_iter(self.token, args))):
+            self.resp_start_times.append(resp.sta_time)
+            self.resp_end_times.append(resp.end_time)
+            self.resp_query_counts.append(1)
+            self.resp_node_counts.append(1)
+            # self.resp_counters.append(resp.counter)
+            # print(resp.logs)
+
             tb = self.fetch_neighbors(resp)
             try:
                 df = tb[(tb.time_stamp >= year_range[0]) & (tb.time_stamp < year_range[1])]
