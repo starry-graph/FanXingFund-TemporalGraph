@@ -52,13 +52,17 @@ def train_model(args, model, train_loader, features, opt):
             # batch_bar.set_postfix(loss=round(loss.item(), 4))
             batch_time = time.time() - batch_start
             batch_start = time.time()
-            sampler = train_loader.sampler
-            start_time = np.min(sampler.resp_start_times)
-            end_time = np.max(sampler.resp_end_times)
-            query_counts = np.sum(sampler.resp_query_counts)
-            node_counts = np.sum(sampler.resp_node_counts)
-            sampler.clear_resp_metrics()
-            sampler_str = ' Sampler services costs {} milliseconds with {} nodes.'.format(end_time - start_time, node_counts)
+            
+            if args.dgl_sampler:
+                sampler_str = 'Using Dgl Neighbor Sampler.'
+            else:
+                sampler = train_loader.sampler
+                start_time = np.min(sampler.resp_start_times)
+                end_time = np.max(sampler.resp_end_times)
+                query_counts = np.sum(sampler.resp_query_counts)
+                node_counts = np.sum(sampler.resp_node_counts)
+                sampler.clear_resp_metrics()
+                sampler_str = ' Sampler services costs {} milliseconds with {} nodes.'.format(end_time - start_time, node_counts) 
             batch_str = '\r Current batch: {}/{} costs {:.2f} seconds.'.format(str(step).zfill(4), len(batch_bar), batch_time)
             print(batch_str + sampler_str, end='')
 

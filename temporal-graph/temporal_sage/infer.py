@@ -59,19 +59,22 @@ def infer_model(args, model, test_loader, features):
             batch_time = time.time() - batch_start
             batch_start = time.time()
 
-            sampler = test_loader.sampler
-            start_time = np.min(sampler.resp_start_times)
-            end_time = np.max(sampler.resp_end_times)
-            query_counts = np.sum(sampler.resp_query_counts)
-            node_counts = np.sum(sampler.resp_node_counts)
-            sampler.clear_resp_metrics()
-            resp_metric_str = f'{start_time},{end_time},{query_counts},{node_counts}\n'
-            header = 'start_time,end_time,request_count,node_count\n'
-            if args.rst_client.status(args.profile_path, strict=False) is None:
-                args.rst_client.write(args.profile_path, data=header, encoding='utf-8')
-            args.rst_client.write(args.profile_path, data=resp_metric_str, encoding='utf-8', append=True)
+            if args.dgl_sampler:
+                sampler_str = 'Using Dgl Neighbor Sampler.'
+            else:
+                sampler = test_loader.sampler
+                start_time = np.min(sampler.resp_start_times)
+                end_time = np.max(sampler.resp_end_times)
+                query_counts = np.sum(sampler.resp_query_counts)
+                node_counts = np.sum(sampler.resp_node_counts)
+                sampler.clear_resp_metrics()
+                resp_metric_str = f'{start_time},{end_time},{query_counts},{node_counts}\n'
+                header = 'start_time,end_time,request_count,node_count\n'
+                if args.rst_client.status(args.profile_path, strict=False) is None:
+                    args.rst_client.write(args.profile_path, data=header, encoding='utf-8')
+                args.rst_client.write(args.profile_path, data=resp_metric_str, encoding='utf-8', append=True)
 
-            sampler_str = ' Sampler service costs total time {} milliseconds with {} queries.'.format(end_time - start_time, node_counts)
+                sampler_str = ' Sampler service costs total time {} milliseconds with {} queries.'.format(end_time - start_time, node_counts)
             # sampler_str = resp_metric_str
             batch_str = '\r Current batch: {}/{} costs {:.2f} seconds.'.format(str(step).zfill(4), len(test_loader), batch_time)
             print(batch_str + sampler_str, end='')
