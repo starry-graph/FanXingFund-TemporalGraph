@@ -1,9 +1,11 @@
+import argparse
 import logging
 import os
 import random
 import sys
 import time
 from datetime import datetime
+from typing import Dict
 
 import numpy as np
 import torch
@@ -12,6 +14,26 @@ import torch
 NOTE_PATH = '/nfs3-p1/zty/2021-FanXing/Academic-Networks/Academic_GNN_Module/'
 DBLP_PATH = NOTE_PATH + 'dblpv13/'
 CSRA_PATH = '/nfs3-p1/zty/2021-FanXing/Academic-Networks/CSrankings/'
+
+def timestamp_transform(config: Dict[str, str], args: argparse.ArgumentParser, logger):
+    tstart = float(config['startTime'])
+    tend = float(config['endTime'])
+    # Processing the config's timespan for each dataset.
+    if args.dataset == 'DBLPV13':
+        # We get the year here, where tstart is at milliesecond.
+        logger.warning('Set the timespan for DBLPV13.')
+        tstart = datetime.fromtimestamp(tstart / 1e3).year
+        tend = datetime.fromtimestamp(tend / 1e3).year
+    elif args.dataset == 'ia_contact':
+        # We compute the offset seconds from (2000, 1, 1).
+        logger.warning('Set the timespan for ia_contact.')
+        offset = datetime(2000, 1, 1).timestamp() * 1e3
+        tstart = (tstart - offset) / 1e3
+        tend = (tend - offset) / 1e3
+    else:
+        logger.warning('Use the config timespan for %s', args.dataset)
+
+    return tstart, tend
 
 
 def set_logger():

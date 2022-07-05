@@ -15,7 +15,7 @@ import pickle as pkl
 import argparse
 
 from batch_model import BatchModel
-from util import set_logger
+from util import set_logger, timestamp_transform
 from build_data import get_data
 
 
@@ -133,6 +133,11 @@ def config2args(config, args):
     args.timespan_end = 364094
     args.dgl_sampler = config['dgl_sampler']
     # args.root_dir = config['dataPath']
+    
+    timespan_start, timespan_end = timestamp_transform(config, args, logger)    
+    args.timespan_start = timespan_start
+    args.timespan_end = timespan_end
+    logger.warning('%s training with time from %.0f to %.0f.', args.dataset, args.timespan_start, args.timespan_end)
     return args
 
 

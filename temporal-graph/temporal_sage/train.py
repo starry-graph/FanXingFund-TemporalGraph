@@ -1,4 +1,4 @@
-from asyncio.log import logger
+from datetime import datetime
 import os
 import numpy as np
 import pandas as pd
@@ -16,10 +16,11 @@ import pickle as pkl
 import argparse
 
 from batch_model import BatchModel
-from util import set_logger
+from util import set_logger, timestamp_transform
 from build_data import get_data
 
 
+logger = set_logger()
 
 def train_model(args, model, train_loader, features, opt):
     for epoch in range(args.epochs):
@@ -115,6 +116,11 @@ def config2args(config, args):
     args.timespan_end = 364094
     args.dgl_sampler = config['dgl_sampler']
     # args.root_dir = config['dataPath']
+
+    timespan_start, timespan_end = timestamp_transform(config, args, logger)    
+    args.timespan_start = timespan_start
+    args.timespan_end = timespan_end
+    logger.warning('%s training with time from %.0f to %.0f.', args.dataset, args.timespan_start, args.timespan_end)
     return args
 
 
@@ -139,7 +145,6 @@ def train(config):
         'dgl_sampler': False
     })
 
-    logger = set_logger()
     args.device = torch.device(f'cuda:{args.gpu}') if torch.cuda.is_available() else torch.device('cpu')
     print(args.device)
     args = config2args(config, args)
