@@ -1,5 +1,6 @@
 import grpc
 from rpc_client import *
+import time
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,7 @@ else:
     from dgl.dataloading import transform
 
 from typing import *
+from nebula_util import QueryGraphChannel
 
 
 def to_pd(table) -> pd.DataFrame:
@@ -158,15 +160,102 @@ class MyMultiLayerSampler:
         return blocks
 
 
+class NeublaMultiLayerSampler:
+    def __init__(self, fanouts, num_nodes, client_address="192.168.1.11:9669", graph_name='DBLPV13'):
+        self.channel = QueryGraphChannel([client_address])
+        self.params = [
+            {
+                "edge_type": "coauthor",
+                # "limit": 20,
+                "direct": "dst_to_src",
+                # "direct": "src_to_dst",
+            }
+        ] * 2
+        self.space_name = graph_name
+        self.node_attrs = ["author_id", "label"]
 
-if __name__ == '__main__':
-    sampler = MyMultiLayerSampler([15, 10], num_nodes=36288, cpp_file = "../wart-servers/examples/sampler.wasm")
+        self.fanouts = fanouts
+        self.num_layer = len(fanouts)
+        self.num_nodes = num_nodes
+
+        self.clear_resp_metrics()
+
+    def clear_resp_metrics(self):
+        self.resp_start_times = []
+        self.resp_end_times = []
+        self.resp_query_counts = []
+        self.resp_node_counts = []
+
+    def sample_neighbors(self, year_range, seed_nodes, fanout):
+        seed_nodes = torch.LongTensor(seed_nodes)
+        batch_size = 100
+        src_l, tgt_l, ts_l = [], [], []
+        min_year, max_year = min(year_range), max(year_range)
+        print('Begin sampling with {} nodes.'.format(len(seed_nodes)))
+        for batch_start in range(0, len(seed_nodes), 100):
+            self.resp_start_times.append(time.time() * 1e3)
+
+            batch_end = batch_start + batch_size
+            batch_nodes = seed_nodes[batch_start:batch_end]
+            resp = self.channel.sample_subgraph(self.space_name, batch_nodes, self.node_attrs, self.params)
+            # 4 columns: src, dst, dist, timestamp
+            edge_index = resp["edge_index"]
+            src, tgt, ts = edge_index[0], edge_index[1], edge_index[3]
+            ts_mask = torch.logical_and(ts >= min_year, ts <= max_year)
+            src_l.append(src[ts_mask])
+            tgt_l.append(tgt[ts_mask])
+            ts_l.append(ts[ts_mask])
+
+
+            self.resp_end_times.append(time.time() * 1e3)
+            self.resp_query_counts.append(len(batch_nodes))
+            self.resp_node_counts.append(len(batch_nodes))
+
+        src_edge = [] if src_l == [] else torch.cat(src_l).to(torch.int64)
+        tgt_edge = [] if src_l == [] else torch.cat(tgt_l).to(torch.int64)
+        ts_edata = [] if src_l == [] else torch.cat(ts_l).to(torch.int64)
+
+        node_set = set(seed_nodes.tolist())
+        src_mask = [idx.item() in node_set for idx in src_edge]
+        src_edge = src_edge[src_mask]
+        tgt_edge = tgt_edge[src_mask]
+        ts_edata = ts_edata[src_mask]
+        print("Get {}/{} edges.".format(len(src_edge), len(src_mask)))
+
+        # for idx in src_edge:
+        # for idx in tgt_edge:
+            # assert idx.item() in node_set
+
+        ret = dgl.graph((tgt_edge, src_edge), num_nodes = self.num_nodes)
+        ret.edata['ts'] = ts_edata.clone().detach()
+        return ret
+    
+    def sample_frontier(self, block_id, year_range, seed_nodes):
+        fanout = self.fanouts[block_id]
+        frontier = self.sample_neighbors(year_range, seed_nodes, fanout)
+        return frontier
+
+
+    def sample_blocks(self, year_range, seed_nodes):
+        blocks = []
+        for block_id in reversed(range(self.num_layer)):
+            # print(block_id, self.fanouts[block_id], seed_nodes)
+            frontier = self.sample_frontier(block_id, year_range, seed_nodes)
+            block = transform.to_block(frontier, seed_nodes)
+            # seed_nodes = {ntype: block.srcnodes[ntype].data[dgl.NID] for ntype in block.srctypes} # ntype: _N
+            seed_nodes = block.srcnodes['_N'].data[dgl.NID]
+
+            blocks.insert(0, block)
+        return blocks
+
+if __name__ == "__main__":
+    # sampler = MyMultiLayerSampler([15, 10], num_nodes=36288, cpp_file = "../wart-servers/examples/sampler.wasm")
     
     # ret = sampler.sample_neighbors((0, 9999), [24004], fanout=15)
     # print(ret)
 
-    block = sampler.sample_blocks((0, 9999), [1007])
-    print(block)
+    # block = sampler.sample_blocks((0, 9999), [1007])
+    # print(block)
     # dataloader = torch.DataLoader(train_data)
     # nfeat = xxx
     # model = xxx
@@ -175,3 +264,10 @@ if __name__ == '__main__':
     #     target_blocks = sampler.sample(target_nodes)
     #     pred_y = model(source_blocks, target_blocks, nfeat)
     #     loss = loss_fn(pred_y, y)
+    sampler = NeublaMultiLayerSampler([10], num_nodes=36288)
+    # ret = sampler.sample_neighbors((0, 9999), [24004], fanout=15)
+    ret = sampler.sample_neighbors((0, 9999), torch.arange(3), fanout=15)
+    print(ret)
+    # block = sampler.sample_blocks((0, 9999), [1007])
+    block = sampler.sample_blocks((0, 9999), torch.arange(3))
+    print(block)

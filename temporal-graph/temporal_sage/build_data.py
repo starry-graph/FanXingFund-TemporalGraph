@@ -8,7 +8,7 @@ from dgl.dataloading import negative_sampler
 from batch_loader import TemporalEdgeDataLoader
 import os
 
-from sampler import MyMultiLayerSampler
+from sampler import MyMultiLayerSampler, NeublaMultiLayerSampler
 
 
 def _load_data(dataset="ia-contact", mode="format_data", root_dir="./"):
@@ -106,6 +106,7 @@ def get_data(args, logger, mode):
     features = [g.ndata['feat'] for g in coauthors]
     num_nodes = coauthors[0].number_of_nodes()
     num_edges = sum([g.number_of_edges() for g in coauthors])
+    # num_edges = graph.number_of_edges()
 
     if args.dgl_sampler:
         if dgl.__version__ > '0.8.0':
@@ -115,7 +116,9 @@ def get_data(args, logger, mode):
             from dgl.dataloading.neighbor import MultiLayerNeighborSampler
             sampler = MultiLayerNeighborSampler([15, 10])
     else:
-        sampler = MyMultiLayerSampler([15, 10], num_nodes=num_nodes, cpp_file = args.cpp_file, graph_name=args.dataset)
+        # sampler = MyMultiLayerSampler([15, 10], num_nodes=num_nodes, cpp_file = args.cpp_file, graph_name=args.dataset)
+        sampler = MyMultiLayerSampler([15], num_nodes=num_nodes, cpp_file = args.cpp_file, graph_name=args.dataset)
+        # sampler = NeublaMultiLayerSampler([15, 10], num_nodes, graph_name=args.dataset)
 
     neg_sampler = negative_sampler.Uniform(5)
     data_range = list(range(1, int(len(coauthors))))
