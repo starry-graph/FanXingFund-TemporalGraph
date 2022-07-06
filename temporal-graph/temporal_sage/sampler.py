@@ -170,7 +170,7 @@ class NeublaMultiLayerSampler:
                 "direct": "dst_to_src",
                 # "direct": "src_to_dst",
             }
-        ] * 2
+        ] # * 2
         self.space_name = graph_name
         self.node_attrs = ["author_id", "label"]
 
@@ -192,6 +192,7 @@ class NeublaMultiLayerSampler:
         src_l, tgt_l, ts_l = [], [], []
         min_year, max_year = min(year_range), max(year_range)
         # print('Begin sampling with {} nodes.'.format(len(seed_nodes)))
+        # print(seed_nodes)
         for batch_start in range(0, len(seed_nodes), 100):
             self.resp_start_times.append(time.time() * 1e3)
 
@@ -215,11 +216,12 @@ class NeublaMultiLayerSampler:
         tgt_edge = [] if src_l == [] else torch.cat(tgt_l).to(torch.int64)
         ts_edata = [] if src_l == [] else torch.cat(ts_l).to(torch.int64)
 
-        node_set = set(seed_nodes.tolist())
-        src_mask = [idx.item() in node_set for idx in src_edge]
-        src_edge = src_edge[src_mask]
-        tgt_edge = tgt_edge[src_mask]
-        ts_edata = ts_edata[src_mask]
+        # node_set = set(seed_nodes.tolist())
+        # # src_mask = [idx.item() in node_set for idx in src_edge]
+        # src_mask = torch.ones_like(src_edge)
+        # src_edge = src_edge[src_mask]
+        # tgt_edge = tgt_edge[src_mask]
+        # ts_edata = ts_edata[src_mask]
         # print("Get {}/{} edges.".format(len(src_edge), len(src_mask)))
 
         # for idx in src_edge:
@@ -264,10 +266,24 @@ if __name__ == "__main__":
     #     target_blocks = sampler.sample(target_nodes)
     #     pred_y = model(source_blocks, target_blocks, nfeat)
     #     loss = loss_fn(pred_y, y)
-    sampler = NeublaMultiLayerSampler([10], num_nodes=36288)
+    seed_nodes = [ 41,  10,   8,  30,  22,  31,  40,   2,  29,  37,  32,   0,  39,  47,
+          4,  43,  36,   1,  19,  12,  44,   5,  26, 207, 199, 168, 215,   9,
+        177, 127, 130,  27, 242, 220,  11, 186, 270,  64,  51,  86, 114,  62,
+         87, 263, 200,  90, 176,  99, 226, 209,  66,  80,   7, 203, 219, 100,
+        253,  42, 180, 108,  73, 257, 165,  13, 201, 191,  14, 119, 181, 121,
+        273, 249,  45, 174,  46,  33, 223, 269,  94, 158, 259, 122, 159, 197,
+        272, 229, 208, 143, 134, 111,  55, 184,  60,  16, 115,  57, 183, 146,
+         65,  81, 107,  72, 211, 110, 128,  93, 145, 218, 194, 150, 246, 178,
+        132, 195, 135,  52, 267, 141,  50, 227, 129, 163,  63, 109]
+    sampler = NeublaMultiLayerSampler([15], num_nodes=274, graph_name='ia_contact')
+    # sampler = NeublaMultiLayerSampler([15], num_nodes=36288, graph_name="DBLPV13")
     # ret = sampler.sample_neighbors((0, 9999), [24004], fanout=15)
-    ret = sampler.sample_neighbors((0, 9999), torch.arange(3), fanout=15)
+    start = time.time()
+    ret = sampler.sample_neighbors((0, 1e11), torch.arange(274), fanout=15)
     print(ret)
+    print('Cost {:.2f} seconds.'.format(time.time() - start))
     # block = sampler.sample_blocks((0, 9999), [1007])
-    block = sampler.sample_blocks((0, 9999), torch.arange(3))
+    start = time.time()
+    block = sampler.sample_blocks((0, 1e11), torch.arange(274))
     print(block)
+    print('Cost {:.2f} seconds.'.format(time.time() - start))
