@@ -63,7 +63,7 @@ def train_model(args, model, train_loader, features, opt):
                 query_counts = np.sum(sampler.resp_query_counts)
                 node_counts = np.sum(sampler.resp_node_counts)
                 sampler.clear_resp_metrics()
-                sampler_str = ' Sampler services costs {} milliseconds with {} nodes.'.format(end_time - start_time, node_counts) 
+                sampler_str = ' Sampler services costs {:.0f} milliseconds with {} nodes.'.format(end_time - start_time, node_counts) 
             batch_str = '\r Current batch: {}/{} costs {:.2f} seconds.'.format(str(step).zfill(4), len(batch_bar), batch_time)
             print(batch_str + sampler_str, end='')
 

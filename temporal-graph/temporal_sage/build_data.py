@@ -117,7 +117,7 @@ def get_data(args, logger, mode):
             sampler = MultiLayerNeighborSampler([15, 10])
     else:
         # sampler = MyMultiLayerSampler([15, 10], num_nodes=num_nodes, cpp_file = args.cpp_file, graph_name=args.dataset)
-        sampler = MyMultiLayerSampler([15], num_nodes=num_nodes, cpp_file = args.cpp_file, graph_name=args.dataset)
+        sampler = NeublaMultiLayerSampler([15], num_nodes, graph_name=args.dataset)
         # sampler = NeublaMultiLayerSampler([15, 10], num_nodes, graph_name=args.dataset)
 
     neg_sampler = negative_sampler.Uniform(5)

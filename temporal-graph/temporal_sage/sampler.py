@@ -191,7 +191,7 @@ class NeublaMultiLayerSampler:
         batch_size = 100
         src_l, tgt_l, ts_l = [], [], []
         min_year, max_year = min(year_range), max(year_range)
-        print('Begin sampling with {} nodes.'.format(len(seed_nodes)))
+        # print('Begin sampling with {} nodes.'.format(len(seed_nodes)))
         for batch_start in range(0, len(seed_nodes), 100):
             self.resp_start_times.append(time.time() * 1e3)
 
@@ -220,7 +220,7 @@ class NeublaMultiLayerSampler:
         src_edge = src_edge[src_mask]
         tgt_edge = tgt_edge[src_mask]
         ts_edata = ts_edata[src_mask]
-        print("Get {}/{} edges.".format(len(src_edge), len(src_mask)))
+        # print("Get {}/{} edges.".format(len(src_edge), len(src_mask)))
 
         # for idx in src_edge:
         # for idx in tgt_edge:
