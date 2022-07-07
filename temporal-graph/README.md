@@ -44,13 +44,30 @@ data_loader
 `python -m data_loader.data_unify -t [datastat|datasplit|datalabel]`
 
 
+### 新版采样算子的TemporalSAGE
 
-### 配置采样算子的TemporalSAGE
+#### 编译query_graph.cpp
+query_graph.cpp是基于torch和nebula接口的查询脚本，因此编译路径需要包含torch和nebula的c++库。
+```bash
+su ztl # 密码ztl123
+conda activate wart
+cd ${temporal_sage的上层目录}
+cd temporal_sage
+./build.sh
+```
+#### 运行TemporalSAGE
+```bash
+cd ..
+python temporal_sage/train.py
+python temporal_sage/infer.py
+```
+
+### 老版采样算子的TemporalSAGE
 
 #### Wart-Servers
 
 - 环境配置：
-```
+```bash
 # 安装rustup
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
@@ -62,21 +79,10 @@ tar xvf wasi-sdk-15.0-linux.tar.gz -C ${HOME}
 pip install grpcio grpcio-tools pandas
 ```
 
-- 启动采样服务器：
-```
-cd temporal-graph/
-git clone https://github.com/wjie98/wart-servers.git
-cd wart-servers/wart-worker
+- 采样服务器在`hpc01:6066`端口已开启
 
-# 编辑配置文件，修改端口
-vim config.yaml
-
-# 启动, 等待服务器运行
-cargo run --release --bin server config.yaml
-```
-
-- 编译
-```
+- 编译新版的sampler.cpp
+```bash
 # 打开另一个终端
 cd temporal-graph/wart-servers/examples/
 ../wasm/build.sh
@@ -94,20 +100,16 @@ cd ../../
 
 #### 运行TemporalSAGE
 
-- Ensure dgl < 0.8.0
 ```
+python temporal_sage/train.py --old_sampler
+python temporal_sage/infer.py --old_sampler
+```
+
+### 运行DGLSampler的TemporalSAGE
+- Ensure dgl < 0.8.0
+```bash
 pip install dgl-cu111==0.6.1
 # or pip install dgl-cu102==0.6.1
-```
-
-- Use wart-Servers sampler:
-```
-python temporal_sage/train.py -c http://192.168.1.13:9009/dev/conf/train.json
-python temporal_sage/infer.py -c http://192.168.1.13:9009/dev/conf/infer.json
-```
-
-- Use dgl sampler:
-```
 python temporal_sage/train.py -c http://192.168.1.13:9009/dev/conf/train.json --dgl_sampler
 python temporal_sage/infer.py -c http://192.168.1.13:9009/dev/conf/infer.json --dgl_sampler
 ```
