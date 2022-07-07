@@ -63,7 +63,7 @@ def train_model(args, model, train_loader, features, opt):
                 query_counts = np.sum(sampler.resp_query_counts)
                 node_counts = np.sum(sampler.resp_node_counts)
                 sampler.clear_resp_metrics()
-                sampler_str = ' Sampler services costs {:.0f} milliseconds with {} nodes.'.format(end_time - start_time, node_counts) 
+                sampler_str = ' Sampler service costs {:.0f} milliseconds with {} nodes.'.format(end_time - start_time, node_counts) 
             batch_str = '\r Current batch: {}/{} costs {:.2f} seconds.'.format(str(step).zfill(4), len(batch_bar), batch_time)
             print(batch_str + sampler_str, end='')
 
@@ -104,23 +104,24 @@ def run(args):
 
 
 def config2args(config, args):
-    # args.dataset = config['spaceId']
+    args.dataset = config['spaceId']
+    timespan_start, timespan_end = timestamp_transform(config, args, logger)    
+    args.timespan_start = timespan_start
+    args.timespan_end = timespan_end
+    logger.warning('%s training with time from %.0f to %.0f.', args.dataset, args.timespan_start, args.timespan_end)
+    # args.dataset = 'DBLPV13'
+    # args.timespan_start = 2000
+    # args.timespan_end = 2020
+
     args.outfile_path = config['outFilePath']
     args.model_path = config['modelPath']
     args.feature_names = config['featureNames']
     txt = config['flinkFeatureNames']
     args.named_feats = 'all' #[ord(s.lower())-ord('a') for s in txt if ord('A') <= ord(s) <=ord('z')] if txt!='all' else 'all'
-    # args.timespan_start = int(config['startTime'])
-    # args.timespan_end = int(config['endTime'])
-    args.timespan_start = 20733
-    args.timespan_end = 364094
     args.dgl_sampler = config['dgl_sampler']
+    args.old_sampler = config['old_sampler']
     # args.root_dir = config['dataPath']
 
-    timespan_start, timespan_end = timestamp_transform(config, args, logger)    
-    args.timespan_start = timespan_start
-    args.timespan_end = timespan_end
-    logger.warning('%s training with time from %.0f to %.0f.', args.dataset, args.timespan_start, args.timespan_end)
     return args
 
 
@@ -130,8 +131,8 @@ def train(config):
         'root_dir': './', 
         'prefix': 'TemporalSAGE', 
         'epochs': 2, 
-        'bs': 1024, 
-        # 'bs': 32, 
+        # 'bs': 1024, 
+        'bs': 32, 
         'num_ts': 20,
         'n_hidden': 100, 
         'embed_dim': 100, 
@@ -143,7 +144,7 @@ def train(config):
         'timespan_start': -np.inf, 
         'timespan_end': np.inf, 
         'cpp_file': "./wart-servers/examples/sampler.wasm", 
-        'dgl_sampler': False
+        'dgl_sampler': False,
     })
 
     args.device = torch.device(f'cuda:{args.gpu}') if torch.cuda.is_available() else torch.device('cpu')
@@ -190,8 +191,9 @@ def get_config(url):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", "-c", type=str, default='http://192.168.1.13:9009/dev/conf/train.json')
-    parser.add_argument("--dgl_sampler", "-s", action='store_true')
+    parser.add_argument('--config', '-c', type=str, default='http://192.168.1.13:9009/dev/conf/train.json')
+    parser.add_argument('--dgl_sampler', '-s', action='store_true')
+    parser.add_argument('--old_sampler', action='store_true')
     args = parser.parse_args()
 
     config = get_config(args.config)
@@ -215,5 +217,6 @@ if __name__ == '__main__':
     #     "idIndex": "1"
     # }
     config['dgl_sampler'] = args.dgl_sampler
+    config['old_sampler'] = args.old_sampler
     outfile_path = train(config)
     print('outfile_path: ', outfile_path)

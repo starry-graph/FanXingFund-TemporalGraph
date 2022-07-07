@@ -111,12 +111,16 @@ def get_data(args, logger, mode):
     if args.dgl_sampler:
         if dgl.__version__ > '0.8.0':
             from dgl.dataloading import NeighborSampler
-            sampler = NeighborSampler([15, 10])
+            # sampler = NeighborSampler([15, 10])
+            sampler = NeighborSampler([15])
         else:
             from dgl.dataloading.neighbor import MultiLayerNeighborSampler
-            sampler = MultiLayerNeighborSampler([15, 10])
-    else:
+            # sampler = MultiLayerNeighborSampler([15, 10])
+            sampler = MultiLayerNeighborSampler([15])
+    elif args.old_sampler:
         # sampler = MyMultiLayerSampler([15, 10], num_nodes=num_nodes, cpp_file = args.cpp_file, graph_name=args.dataset)
+        sampler = MyMultiLayerSampler([15], num_nodes=num_nodes, cpp_file = args.cpp_file, graph_name=args.dataset)
+    else:
         sampler = NeublaMultiLayerSampler([15], num_nodes, graph_name=args.dataset)
         # sampler = NeublaMultiLayerSampler([15, 10], num_nodes, graph_name=args.dataset)
 

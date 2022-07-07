@@ -101,12 +101,15 @@ class MyMultiLayerSampler:
         seed_nodes = seed_nodes.tolist() if isinstance(seed_nodes, torch.Tensor) else seed_nodes
         args = [ [str(item)] for item in seed_nodes]
         cnt = 0
+        print('Sampling {} nodes.'.format(len(seed_nodes)))
         for i, resp in enumerate(self.stub.StreamingRun(streaming_run_iter(self.token, args))):
             self.resp_start_times.append(resp.sta_time)
             self.resp_end_times.append(resp.end_time)
             self.resp_query_counts.append(1)
             self.resp_node_counts.append(1)
+            print(i, args[i])
             # self.resp_counters.append(resp.counter)
+            # print(resp)
             # print(resp.logs)
 
             tb = self.fetch_neighbors(resp)
@@ -275,8 +278,8 @@ if __name__ == "__main__":
         272, 229, 208, 143, 134, 111,  55, 184,  60,  16, 115,  57, 183, 146,
          65,  81, 107,  72, 211, 110, 128,  93, 145, 218, 194, 150, 246, 178,
         132, 195, 135,  52, 267, 141,  50, 227, 129, 163,  63, 109]
-    sampler = NeublaMultiLayerSampler([15], num_nodes=274, graph_name='ia_contact')
-    # sampler = NeublaMultiLayerSampler([15], num_nodes=36288, graph_name="DBLPV13")
+    # sampler = NeublaMultiLayerSampler([15], num_nodes=274, graph_name='ia_contact')
+    sampler = NeublaMultiLayerSampler([15], num_nodes=36288, graph_name="DBLPV13")
     # ret = sampler.sample_neighbors((0, 9999), [24004], fanout=15)
     start = time.time()
     ret = sampler.sample_neighbors((0, 1e11), torch.arange(274), fanout=15)

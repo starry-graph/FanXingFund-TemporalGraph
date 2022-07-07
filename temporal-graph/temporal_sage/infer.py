@@ -121,23 +121,24 @@ def run(args):
 
 
 def config2args(config, args):
-    # args.dataset = config['spaceId']
+    args.dataset = config['spaceId']
+    timespan_start, timespan_end = timestamp_transform(config, args, logger)    
+    args.timespan_start = timespan_start
+    args.timespan_end = timespan_end
+    logger.warning('%s training with time from %.0f to %.0f.', args.dataset, args.timespan_start, args.timespan_end)
+    # args.dataset = 'DBLPV13'
+    # args.timespan_start = 2000
+    # args.timespan_end = 2020
+
     args.outfile_path = config['outFilePath']
     args.model_path = config['modelPath']
     args.feature_names = config['featureNames']
     txt = config['flinkFeatureNames']
     args.named_feats = 'all' # [ord(s.lower())-ord('a') for s in txt if ord('A') <= ord(s) <=ord('z')] if txt!='all' else 'all'
-    # args.timespan_start = int(config['startTime'])
-    # args.timespan_end = int(config['endTime'])
-    args.timespan_start = 20733
-    args.timespan_end = 364094
     args.dgl_sampler = config['dgl_sampler']
+    args.old_sampler = config['old_sampler']
     # args.root_dir = config['dataPath']
     
-    timespan_start, timespan_end = timestamp_transform(config, args, logger)    
-    args.timespan_start = timespan_start
-    args.timespan_end = timespan_end
-    logger.warning('%s training with time from %.0f to %.0f.', args.dataset, args.timespan_start, args.timespan_end)
     return args
 
 
@@ -158,7 +159,7 @@ def infer(config):
         'named_feats': 'all', 
         'timespan_start': -np.inf, 
         'timespan_end': np.inf, 
-        'cpp_file': "./wart-servers/examples/sampler.wasm"
+        'cpp_file': './wart-servers/examples/sampler.wasm',
     })
 
     logger = set_logger()
@@ -210,6 +211,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", type=str, default='http://192.168.1.13:9009/dev/conf/infer.json')
     parser.add_argument("--dgl_sampler", "-s", action='store_true')
+    parser.add_argument('--old_sampler', action='store_true')
     args = parser.parse_args()
 
     config = get_config(args.config)
@@ -232,6 +234,7 @@ if __name__ == '__main__':
     #     "idIndex": "1"
     # }
     config['dgl_sampler'] = args.dgl_sampler
+    config['old_sampler'] = args.old_sampler
 
     outfile_path = infer(config)
     print('outfile_path: ', outfile_path)
