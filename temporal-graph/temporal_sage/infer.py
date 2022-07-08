@@ -13,14 +13,54 @@ import json
 import urllib.parse as urlparse
 import pickle as pkl
 import argparse
+from collections import defaultdict
 
 from batch_model import BatchModel
 from util import set_logger, timestamp_transform
 from build_data import get_data
 
 
+def gen_org_co(args, df_pred, nid2oid, mode='format'):
+    mode = "{}_data".format(mode)
+    org_map = pd.read_csv("{}/{}/{}.orgmap".format(args.root_dir, mode, args.dataset))
+    oid2oname = org_map.set_index('Index').to_dict()['_ID']
 
-def infer_model(args, model, test_loader, features):
+    df = df_pred[df_pred.label == 1]
+    df['from_oid'] = df['from_nid'].map(nid2oid)
+    df['to_oid'] = df['to_nid'].map(nid2oid)
+    df['from_oname'] = df['from_oid'].map(oid2oname)
+    df['to_oname'] = df['to_oid'].map(oid2oname)
+
+    dic = {}
+    for year in range(2000, 2022):
+        dic[year] = defaultdict(int)
+
+    for i in range(len(df)):
+        src = df['from_oname'].iloc[i]
+        tgt = df['to_oname'].iloc[i]
+        year = int(df['timespan'].iloc[i])
+        if src != tgt and src != 'NOT FOUND' and tgt != 'NOT FOUND':
+            dic[year][(src, tgt)] += 1
+    
+    out = {}
+    for year, dd in dic.items():
+        out[year] = [[key[0], key[1], val] for key, val in dd.items()]
+    return out
+
+
+def gen_metrics(args, y_label, y_pred, y_prob, y_ts):
+    rst = {}
+    for year in range(args.timespan_start, args.timespan_end):
+        idx = np.where(y_ts==year)[0]
+        acc = accuracy_score(y_label[idx], y_pred[idx])
+        ap = average_precision_score(y_label[idx], y_prob[idx])
+        auc = roc_auc_score(y_label[idx], y_prob[idx])
+        f1 = f1_score(y_label[idx], y_pred[idx])
+        rst[year] = {'ACC': acc, 'F1': f1, 'AP': ap, 'AUC': auc}
+    return rst
+
+
+def infer_model(args, model, test_loader, features, nid2oid):
     model.eval()
     y_probs, y_labels = [], []
     from_nodes, to_nodes, y_timespan = [], [], []
@@ -102,12 +142,23 @@ def infer_model(args, model, test_loader, features):
     with args.rst_client.write(args.pred_path, encoding='utf-8', overwrite=True) as writer:
         df.to_csv(writer, index=False)
 
+    # visualization
+    if args.dataset == 'DBLPV13':
+        vis_rst = gen_metrics(args, y_label, y_pred, y_prob, y_ts)
+        with args.rst_client.write(args.vis_rst_path, encoding='utf-8', overwrite=True) as writer:
+            json.dump(vis_rst, writer)
+        
+        df = pd.DataFrame({'from_nid': from_nid, 'to_nid': to_nid, 'label': y_label ,'prob': y_prob, 'timespan': y_ts})
+        vis_preds = gen_org_co(args, df, nid2oid, mode='format')
+        with args.rst_client.write(args.vis_pred_path, encoding='utf-8', overwrite=True) as writer:
+            json.dump(vis_preds, writer)
+        
     return args.outfile_path
 
 
 def run(args):
     logger.info(f'Loading dataset {args.dataset} from {args.root_dir}')
-    test_loader, features, n_features, num_nodes, num_edges = get_data(args, logger, mode='infer')
+    test_loader, features, n_features, num_nodes, num_edges, nid2oid = get_data(args, logger, mode='infer')
 
     model = BatchModel(n_features, args.n_hidden, args.embed_dim, args.n_layers).to(args.device)
     logger.info(f'Loading model from {args.model_path}')
@@ -117,7 +168,7 @@ def run(args):
     model.load_state_dict(model_dict)
     
     logger.info('Begin infering with %d nodes, %d edges.', num_nodes, num_edges)
-    infer_model(args, model, test_loader, features)
+    infer_model(args, model, test_loader, features, nid2oid)
 
 
 def config2args(config, args):
@@ -127,7 +178,7 @@ def config2args(config, args):
     args.timespan_end = timespan_end
     logger.warning('%s training with time from %.0f to %.0f.', args.dataset, args.timespan_start, args.timespan_end)
     # args.dataset = 'DBLPV13'
-    # args.timespan_start = 2000
+    # args.timespan_start = 2001
     # args.timespan_end = 2020
 
     args.outfile_path = config['outFilePath']
@@ -178,6 +229,8 @@ def infer(config):
     args.pred_path = os.path.join(file_path, 'prediction.csv')
     args.rst_path = os.path.join(file_path, 'infer_metrics.csv')
     args.profile_path = os.path.join(file_path, 'profile.csv')
+    args.vis_rst_path = os.path.join(file_path, 'vis_metrics.json')
+    args.vis_pred_path = os.path.join(file_path, 'vis_prediction.json')
 
     client_path, args.model_path = split_url(args.model_path)
     args.model_client = Client(client_path)

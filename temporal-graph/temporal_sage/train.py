@@ -94,7 +94,7 @@ def train_model(args, model, train_loader, features, opt):
 
 def run(args):
     logger.info(f'Loading dataset {args.dataset} from {args.root_dir}')
-    train_loader, features, n_features, num_nodes, num_edges = get_data(args, logger, mode='train')
+    train_loader, features, n_features, num_nodes, num_edges, _ = get_data(args, logger, mode='train')
 
     model = BatchModel(n_features, args.n_hidden, args.embed_dim, args.n_layers).to(args.device)
     opt = torch.optim.Adam(model.parameters())

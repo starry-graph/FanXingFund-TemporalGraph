@@ -129,4 +129,9 @@ def get_data(args, logger, mode):
     data_loader = TemporalEdgeDataLoader(args.dgl_sampler, coauthors, data_range, time_range, 
         sampler, negative_sampler=neg_sampler, batch_size=args.bs, shuffle=False,
         drop_last=False, num_workers=0)
-    return data_loader, features, n_features, num_nodes, num_edges
+
+    if args.dataset == 'DBLPV13':
+        nid2oid = nodes.set_index('id_map').to_dict()['org']
+    else:
+        nid2oid = {}
+    return data_loader, features, n_features, num_nodes, num_edges, nid2oid

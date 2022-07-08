@@ -1,0 +1,564 @@
+Type,_ID,Index
+Org,NOT FOUND,0
+Org,university of edinburgh,1
+Org,tsinghua university,2
+Org,university of cincinnati,3
+Org,usp,4
+Org,imperial college london,5
+Org,monash university,6
+Org,texas a&m university,7
+Org,carnegie mellon university,8
+Org,concordia university,9
+Org,fudan university,10
+Org,epfl,11
+Org,george mason university,12
+Org,university of washington,13
+Org,university of waterloo,14
+Org,university of melbourne,15
+Org,cornell university,16
+Org,kaist,17
+Org,purdue university,18
+Org,zhejiang university,19
+Org,university of pittsburgh,20
+Org,university of british columbia,21
+Org,tel aviv university,22
+Org,kth royal institute of technology,23
+Org,bielefeld university,24
+Org,université libre de bruxelles,25
+Org,uppsala university,26
+Org,university of helsinki,27
+Org,vanderbilt university,28
+Org,university of alberta,29
+Org,ipm,30
+Org,west virginia university,31
+Org,ohio state university,32
+Org,university of tennessee,33
+Org,shenzhen university,34
+Org,shanghai jiao tong university,35
+Org,university of michigan,36
+Org,northwestern university,37
+Org,iowa state university,38
+Org,wayne state university,39
+Org,waseda university,40
+Org,eurecom,41
+Org,university of sydney,42
+Org,korea university,43
+Org,university of south carolina,44
+Org,university of miami,45
+Org,university of haifa,46
+Org,university of windsor,47
+Org,university of minnesota,48
+Org,national taiwan university,49
+Org,university of twente,50
+Org,university of leeds,51
+Org,clemson university,52
+Org,university of rostock,53
+Org,federal university of rio grande,54
+Org,boston university,55
+Org,university of warsaw,56
+Org,university of oxford,57
+Org,university of athens,58
+Org,university of szeged,59
+Org,hebrew university of jerusalem,60
+Org,chinese academy of sciences,61
+Org,arizona state university,62
+Org,university of north carolina,63
+Org,georgia institute of technology,64
+Org,university of auckland,65
+Org,virginia tech,66
+Org,massachusetts institute of technology,67
+Org,louisiana tech university,68
+Org,hanyang university,69
+Org,osaka university,70
+Org,university of florida,71
+Org,university of magdeburg,72
+Org,southern methodist university,73
+Org,rmit university,74
+Org,tu darmstadt,75
+Org,university of sheffield,76
+Org,university of manitoba,77
+Org,university of nottingham,78
+Org,weizmann institute of science,79
+Org,tu wien,80
+Org,nanjing university,81
+Org,university of toronto,82
+Org,chinese university of hong kong,83
+Org,uff,84
+Org,university at buffalo,85
+Org,university of calgary,86
+Org,university of newcastle,87
+Org,michigan state university,88
+Org,university of missouri,89
+Org,university of vermont,90
+Org,university of cambridge,91
+Org,aalto university,92
+Org,simon fraser university,93
+Org,goethe university frankfurt,94
+Org,university of salzburg,95
+Org,michigan technological university,96
+Org,florida international university,97
+Org,tokyo institute of technology,98
+Org,iit kharagpur,99
+Org,seoul national university,100
+Org,university of zurich,101
+Org,university of malaya,102
+Org,university of canterbury,103
+Org,iit bombay,104
+Org,university of texas at austin,105
+Org,national tsing hua university,106
+Org,national university of singapore,107
+Org,university of oldenburg,108
+Org,national chiao tung university,109
+Org,eth zurich,110
+Org,yale university,111
+Org,czech technical university,112
+Org,stanford university,113
+Org,northeastern university,114
+Org,utrecht university,115
+Org,university of massachusetts boston,116
+Org,brigham young university,117
+Org,university of southampton,118
+Org,australian national university,119
+Org,istanbul technical university,120
+Org,nanyang technological university,121
+Org,national cheng kung university,122
+Org,colorado state university,123
+Org,university of crete,124
+Org,university college london,125
+Org,bar-ilan university,126
+Org,university of notre dame,127
+Org,rensselaer polytechnic institute,128
+Org,university of nevada,129
+Org,postech,130
+Org,lancaster university,131
+Org,charles university,132
+Org,saarland university,133
+Org,mcgill university,134
+Org,iiit bangalore,135
+Org,university of nebraska,136
+Org,california institute of technology,137
+Org,rwth aachen,138
+Org,university of amsterdam,139
+Org,university of bristol,140
+Org,university of manchester,141
+Org,university of stuttgart,142
+Org,university of birmingham,143
+Org,middle east technical university,144
+Org,keio university,145
+Org,pennsylvania state university,146
+Org,ryerson university,147
+Org,indiana state university,148
+Org,harvard university,149
+Org,new york university,150
+Org,kansas state university,151
+Org,university of bern,152
+Org,aalborg university,153
+Org,columbia university,154
+Org,university of ioannina,155
+Org,university of utah,156
+Org,university of buenos aires,157
+Org,lund university,158
+Org,king's college london,159
+Org,università della svizzera italiana,160
+Org,indiana university,161
+Org,university of pennsylvania,162
+Org,utah state university,163
+Org,drexel university,164
+Org,wuhan university,165
+Org,tu dortmund,166
+Org,university of iowa,167
+Org,university of hamburg,168
+Org,rutgers university,169
+Org,tu berlin,170
+Org,yonsei university,171
+Org,university of tokyo,172
+Org,aarhus university,173
+Org,university of north texas,174
+Org,university of victoria,175
+Org,university of vienna,176
+Org,radboud university,177
+Org,soochow university,178
+Org,boise state university,179
+Org,temple university,180
+Org,rice university,181
+Org,masdar institute,182
+Org,xi'an jiaotong university,183
+Org,university of saskatchewan,184
+Org,new mexico state university,185
+Org,university of bath,186
+Org,kyung hee university,187
+Org,unsw,188
+Org,georgia state university,189
+Org,rochester institute of technology,190
+Org,leiden university,191
+Org,lehigh university,192
+Org,stony brook university,193
+Org,university of groningen,194
+Org,johns hopkins university,195
+Org,university of illinois at chicago,196
+Org,unicamp,197
+Org,cmi,198
+Org,koç university,199
+Org,technion,200
+Org,university of warwick,201
+Org,durham university,202
+Org,brandenburg university of technology,203
+Org,ntnu,204
+Org,case western reserve university,205
+Org,kaust,206
+Org,university of surrey,207
+Org,university of bonn,208
+Org,texas state university,209
+Org,harbin institute of technology,210
+Org,sapienza university of rome,211
+Org,university of ottawa,212
+Org,university of arizona,213
+Org,kyoto university,214
+Org,loughborough university,215
+Org,kent state university,216
+Org,bits pilani,217
+Org,emory university,218
+Org,princeton university,219
+Org,montana state university,220
+Org,florida atlantic university,221
+Org,university of freiburg,222
+Org,masaryk university,223
+Org,university of augsburg,224
+Org,bocconi university,225
+Org,university of southern california,226
+Org,carleton university,227
+Org,university of bergen,228
+Org,ku leuven,229
+Org,university of texas at dallas,230
+Org,north carolina state university,231
+Org,university of colorado boulder,232
+Org,university of bremen,233
+Org,cardiff university,234
+Org,university of kentucky,235
+Org,memorial university of newfoundland,236
+Org,university of virginia,237
+Org,florida state university,238
+Org,queen's university,239
+Org,university of leipzig,240
+Org,brown university,241
+Org,towson university,242
+Org,university of queensland,243
+Org,universidad de chile,244
+Org,cleveland state university,245
+Org,royal holloway university of london,246
+Org,cwi,247
+Org,university of connecticut,248
+Org,sharif university of technology,249
+Org,university college dublin,250
+Org,sun yat-sen university,251
+Org,university of texas at arlington,252
+Org,university of murcia,253
+Org,king abdulaziz university,254
+Org,georgetown university,255
+Org,university of duisburg-essen,256
+Org,oakland university,257
+Org,university of rochester,258
+Org,universidad nacional de córdoba,259
+Org,university of adelaide,260
+Org,city university of hong kong,261
+Org,universidade nova de lisboa,262
+Org,newcastle university,263
+Org,dalhousie university,264
+Org,louisiana state university,265
+Org,ufrgs,266
+Org,university of sannio,267
+Org,american university of beirut,268
+Org,renmin university of china,269
+Org,peking university,270
+Org,ufrj,271
+Org,ntua,272
+Org,university of tsukuba,273
+Org,university of hong kong,274
+Org,macquarie university,275
+Org,politecnico di milano,276
+Org,univ. of illinois at urbana-champaign,277
+Org,university of kent,278
+Org,old dominion university,279
+Org,university of houston,280
+Org,university of york,281
+Org,university of münster,282
+Org,karlsruhe institute of technology,283
+Org,middlesex university,284
+Org,university of osnabrück,285
+Org,university of texas at san antonio,286
+Org,university of mannheim,287
+Org,lebanese american university,288
+Org,university of georgia,289
+Org,university of a coruña,290
+Org,tongji university,291
+Org,university of kassel,292
+Org,tu braunschweig,293
+Org,university of arkansas,294
+Org,naval postgraduate school,295
+Org,iiit delhi,296
+Org,beihang university,297
+Org,university of trento,298
+Org,university of western australia,299
+Org,university of copenhagen,300
+Org,royal military college of canada,301
+Org,just,302
+Org,universidad de zaragoza,303
+Org,kyungpook national university,304
+Org,ustc,305
+Org,max planck society,306
+Org,washington university in st. louis,307
+Org,syracuse university,308
+Org,depaul university,309
+Org,hunan university,310
+Org,graz university of technology,311
+Org,illinois institute of technology,312
+Org,ufmg,313
+Org,university of sussex,314
+Org,university of glasgow,315
+Org,dartmouth college,316
+Org,iit delhi,317
+Org,ruhr-university bochum,318
+Org,brandeis university,319
+Org,ben-gurion university of the negev,320
+Org,tu munich,321
+Org,university of wisconsin - madison,322
+Org,mcmaster university,323
+Org,boğaziçi university,324
+Org,jku linz,325
+Org,university of ulm,326
+Org,queen mary university of london,327
+Org,humboldt university of berlin,328
+Org,tilburg university,329
+Org,york university,330
+Org,university of montreal,331
+Org,bilkent university,332
+Org,the hong kong polytechnic university,333
+Org,tu dresden,334
+Org,university of pisa,335
+Org,duke university,336
+Org,george washington university,337
+Org,polytechnic university of catalonia,338
+Org,university of piraeus,339
+Org,north dakota state university,340
+Org,university of waikato,341
+Org,university of innsbruck,342
+Org,university of central florida,343
+Org,ufpe,344
+Org,maastricht university,345
+Org,university of oregon,346
+Org,hkust,347
+Org,university of massachusetts lowell,348
+Org,ecole normale superieure,349
+Org,oregon state university,350
+Org,university of chicago,351
+Org,portland state university,352
+Org,chulalongkorn university,353
+Org,ohio university,354
+Org,de la salle university,355
+Org,université de sherbrooke,356
+Org,friedrich schiller university jena,357
+Org,universidade de lisboa,358
+Org,texas tech university,359
+Org,university of delaware,360
+Org,university of siegen,361
+Org,university of düsseldorf,362
+Org,puc-rio,363
+Org,nova southeastern university,364
+Org,oklahoma state university,365
+Org,university of louisville,366
+Org,universidad de los andes,367
+Org,shandong university,368
+Org,bundeswehr university munich,369
+Org,university of salerno,370
+Org,universidad rey juan carlos,371
+Org,university of idaho,372
+Org,university of regina,373
+Org,cuny,374
+Org,goldsmiths university of london,375
+Org,iust,376
+Org,air force institute of technology,377
+Org,tufts university,378
+Org,heriot-watt university,379
+Org,hong kong baptist university,380
+Org,birkbeck university of london,381
+Org,lums,382
+Org,university of wuppertal,383
+Org,university of tartu,384
+Org,heidelberg university,385
+Org,university of tübingen,386
+Org,university of guelph,387
+Org,university of new hampshire,388
+Org,mississippi state university,389
+Org,brno university of technology,390
+Org,ariel university,391
+Org,university of technology sydney,392
+Org,tulane university,393
+Org,university of liverpool,394
+Org,university of st andrews,395
+Org,colorado school of mines,396
+Org,ufu,397
+Org,university of potsdam,398
+Org,boston college,399
+Org,university of new orleans,400
+Org,university of hawaii at manoa,401
+Org,university of bayreuth,402
+Org,cyprus university of technology,403
+Org,university of south florida,404
+Org,singapore management university,405
+Org,auburn university,406
+Org,worcester polytechnic institute,407
+Org,university of new mexico,408
+Org,university of exeter,409
+Org,american university in cairo,410
+Org,national institute of technology silchar,411
+Org,jacobs university bremen,412
+Org,university of aberdeen,413
+Org,dtu,414
+Org,university of otago,415
+Org,western michigan university,416
+Org,qatar computing research institute,417
+Org,university of kansas,418
+Org,iit hyderabad,419
+Org,university of massachusetts amherst,420
+Org,florida institute of technology,421
+Org,university of michigan-dearborn,422
+Org,university of memphis,423
+Org,university of halle-wittenberg,424
+Org,university of luxembourg,425
+Org,njit,426
+Org,it university of copenhagen,427
+Org,queen’s university,428
+Org,university of essex,429
+Org,massey university,430
+Org,university of jordan,431
+Org,western university,432
+Org,victoria university of wellington,433
+Org,hamburg university of technology,434
+Org,university of tulsa,435
+Org,university of mississippi,436
+Org,university of l'aquila,437
+Org,cispa helmholtz center,438
+Org,galatasaray university,439
+Org,university of dundee,440
+Org,university of maine,441
+Org,university of konstanz,442
+Org,university of oklahoma,443
+Org,university of cape town,444
+Org,lmu munich,445
+Org,hasso plattner institute,446
+Org,washington state university,447
+Org,university of göttingen,448
+Org,stevens institute of technology,449
+Org,university of nevada las vegas,450
+Org,stellenbosch university,451
+Org,iiit hyderabad,452
+Org,virginia commonwealth university,453
+Org,hacettepe university,454
+Org,university of bamberg,455
+Org,binghamton university,456
+Org,scuola superiore sant'anna,457
+Org,university of wyoming,458
+Org,unist,459
+Org,new mexico tech,460
+Org,qatar university,461
+Org,the university of alabama,462
+Org,imdea software institute,463
+Org,university of marburg,464
+Org,university of passau,465
+Org,university of koblenz-landau,466
+Org,iit kanpur,467
+Org,tu delft,468
+Org,iupui,469
+Org,university of wroclaw,470
+Org,missouri s&t,471
+Org,iit madras,472
+Org,university of malta,473
+Org,tu clausthal,474
+Org,brunel university london,475
+Org,university of würzburg,476
+Org,university of hannover,477
+Org,izmir institute of technology,478
+Org,iit roorkee,479
+Org,university of kiel,480
+Org,university of wisconsin - milwaukee,481
+Org,aberystwyth university,482
+Org,buet,483
+Org,bauhaus university weimar,484
+Org,northern arizona university,485
+Org,nwpu,486
+Org,imdea networks institute,487
+Org,tu kaiserslautern,488
+Org,university of lübeck,489
+Org,cristal,490
+Org,college of william and mary,491
+Org,uestc,492
+Org,iit bhubaneswar,493
+Org,university of missouri - kansas city,494
+Org,paderborn university,495
+Org,university of trier,496
+Org,ohsu,497
+Org,yıldız technical university,498
+Org,claremont graduate university,499
+Org,université jean monnet,500
+Org,hec montreal,501
+Org,university of hildesheim,502
+Org,tu eindhoven,503
+Org,ist austria,504
+Org,universidade de brasília,505
+Org,tu ilmenau,506
+Org,daiict,507
+Org,freie universitaet berlin,508
+Org,iit patna,509
+Org,tu chemnitz,510
+Org,university of molise,511
+Org,polytechnique montreal,512
+Org,univ. of california - santa barbara,513
+Org,open university uk,514
+Org,kmutnb,515
+Org,sabancı university,516
+Org,university of erlangen–nuremberg,517
+Org,ontario tech university,518
+Org,university of mainz,519
+Org,university of denver,520
+Org,university of colorado - denver,521
+Org,puc-rs,522
+Org,university of nicosia,523
+Org,westlake university,524
+Org,iit guwahati,525
+Org,university of southern mississippi,526
+Org,vu amsterdam,527
+Org,iisc bangalore,528
+Org,sutd,529
+Org,shanghaitech university,530
+Org,university of maryland - college park,531
+Org,augusta university,532
+Org,imsc,533
+Org,universidade federal de viçosa,534
+Org,liu post,535
+Org,tu freiberg,536
+Org,iit (bhu) varanasi,537
+Org,iit mandi,538
+Org,city university of london,539
+Org,babeș-bolyai university,540
+Org,aueb,541
+Org,univ. of california - berkeley,542
+Org,iit ropar,543
+Org,tti chicago,544
+Org,simmons university,545
+Org,nyu shanghai,546
+Org,ufms,547
+Org,uccs,548
+Org,university at albany - suny,549
+Org,simula uib,550
+Org,univ. of california - los angeles,551
+Org,iit indore,552
+Org,university of arkansas - little rock,553
+Org,ets montreal,554
+Org,iit gandhinagar,555
+Org,sufe,556
+Org,iit jodhpur,557
+Org,ipi pan,558
+Org,university of louisiana - lafayette,559
+Org,univ. of california - san diego,560
+Org,univ. of california - irvine,561
+Org,univ. of california - davis,562
