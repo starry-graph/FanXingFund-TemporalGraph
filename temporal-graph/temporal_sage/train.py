@@ -109,9 +109,11 @@ def config2args(config, args):
     args.timespan_start = timespan_start
     args.timespan_end = timespan_end
     logger.warning('%s training with time from %.0f to %.0f.', args.dataset, args.timespan_start, args.timespan_end)
-    # args.dataset = 'DBLPV13'
-    # args.timespan_start = 2000
-    # args.timespan_end = 2020
+    args.epochs = 1
+    args.dataset = 'DBLPV13'
+    args.timespan_start = 2000
+    args.timespan_end = 2002
+    args.num_ts = 2
 
     args.outfile_path = config['outFilePath']
     args.model_path = config['modelPath']
