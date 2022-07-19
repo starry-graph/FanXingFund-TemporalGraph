@@ -56,7 +56,13 @@ def split_graph(args, logger, graph, num_ts, mode):
         num_ts += 1
         logger.info(f'Inference needs one more history graph, so timespan:{args.timespan_start}->{ts_start}, num_ts:{num_ts-1}->{num_ts}')
 
-    timespan = np.ceil((ts_end - ts_start) / num_ts)
+    timespan = (ts_end - ts_start) / num_ts
+    if timespan < 1.0:
+        timespan = 1.0
+        num_ts = int((ts_end - ts_start) / timespan)
+        logger.warning(f'The number of snapshots is too large, and has been reduced to {num_ts}.')
+    else:
+        timespan = np.ceil(timespan)
     logger.info(f'Split graph into {num_ts} snapshots between {ts_start} and {ts_end}, timespan is {timespan}.')
     graphs, time_range = [], []
 
@@ -75,23 +81,23 @@ def split_graph(args, logger, graph, num_ts, mode):
         if args.temporal_feat:
             ts_graph.ndata['feat'] = node_feats[int(ts_low)]
 
-        old_feat = ts_graph.ndata['feat']
-        if 'all' not in args.named_feats:
-            feat_select = []
+        # old_feat = ts_graph.ndata['feat']
+        # if 'all' not in args.named_feats:
+        #     feat_select = []
             
-            for dim in args.named_feats:
-                try:
-                    dim = int(dim)
-                except:
-                    raise ValueError(f'--named_feats must be list(int), but {dim} is not a integer')
-                feat_select.append(old_feat[:, dim:dim+1])
-            ts_graph.ndata['feat'] = torch.hstack(feat_select)
+        #     for dim in args.named_feats:
+        #         try:
+        #             dim = int(dim)
+        #         except:
+        #             raise ValueError(f'--named_feats must be list(int), but {dim} is not a integer')
+        #         feat_select.append(old_feat[:, dim:dim+1])
+        #     ts_graph.ndata['feat'] = torch.hstack(feat_select)
 
         graphs.append(ts_graph)
         time_range.append((ts_low, ts_high))
 
-    new_feat = graphs[0].ndata['feat']
-    logger.info(f'Select these dims: {args.named_feats} and change node feats from {old_feat.shape} to {new_feat.shape}')
+    # new_feat = graphs[0].ndata['feat']
+    # logger.info(f'Select these dims: {args.named_feats} and change node feats from {old_feat.shape} to {new_feat.shape}')
     return graphs, time_range
 
 
@@ -101,10 +107,12 @@ def get_data(args, logger, mode):
     logger.info('Graph %s.', str(graph))
     coauthors, time_range = split_graph(args, logger, graph, num_ts=args.num_ts, mode=mode)
 
-    node_features = coauthors[0].ndata['feat']
+    # node_features = coauthors[0].ndata['feat']
+    node_features = graph.ndata['feat']
     n_features = node_features.shape[1]
     
-    features = [g.ndata['feat'] for g in coauthors]
+    # features = [g.ndata['feat'] for g in coauthors]
+    features = [graph.ndata['feat']] * len(coauthors)
     num_nodes = coauthors[0].number_of_nodes()
     num_edges = sum([g.number_of_edges() for g in coauthors])
     # num_edges = graph.number_of_edges()
