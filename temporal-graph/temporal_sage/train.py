@@ -16,7 +16,7 @@ import pickle as pkl
 import argparse
 
 from batch_model import BatchModel
-from util import set_logger, timestamp_transform
+from util import set_logger, set_random_seed, timestamp_transform
 from build_data import get_data
 
 
@@ -111,7 +111,7 @@ def config2args(config, args):
     logger.warning('%s training with time from %.0f to %.0f.', args.dataset, args.timespan_start, args.timespan_end)
     # args.dataset = 'DBLPV13'
     # args.timespan_start = 2000
-    # args.timespan_end = 2020
+    # args.timespan_end = 2003
 
     args.outfile_path = config['outFilePath']
     args.model_path = config['modelPath']
@@ -196,6 +196,7 @@ if __name__ == '__main__':
     parser.add_argument('--old_sampler', action='store_true')
     args = parser.parse_args()
 
+    set_random_seed()
     config = get_config(args.config)
     print(config)
     # config = {

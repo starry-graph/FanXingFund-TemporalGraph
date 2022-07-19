@@ -6,6 +6,7 @@ from tqdm import trange
 import pickle as pkl
 from dgl.dataloading import negative_sampler
 from batch_loader import TemporalEdgeDataLoader
+from batch_loader2 import TemporalEdgeDataLoader2
 import os
 
 from sampler import MyMultiLayerSampler, NeublaMultiLayerSampler
@@ -126,6 +127,15 @@ def get_data(args, logger, mode):
 
     neg_sampler = negative_sampler.Uniform(5)
     data_range = list(range(1, int(len(coauthors))))
+    
+    # from dgl.dataloading.neighbor import MultiLayerNeighborSampler
+    # sampler = NeublaMultiLayerSampler([15], num_nodes, graph_name=args.dataset)
+    # dsampler = MultiLayerNeighborSampler([15])
+    # samplers = (sampler, dsampler)
+    # data_loader = TemporalEdgeDataLoader2(args.dgl_sampler, coauthors, data_range, time_range, 
+    #     samplers, negative_sampler=neg_sampler, batch_size=args.bs, shuffle=False,
+    #     drop_last=False, num_workers=0)
+    
     data_loader = TemporalEdgeDataLoader(args.dgl_sampler, coauthors, data_range, time_range, 
         sampler, negative_sampler=neg_sampler, batch_size=args.bs, shuffle=False,
         drop_last=False, num_workers=0)

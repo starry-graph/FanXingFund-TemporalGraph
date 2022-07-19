@@ -189,14 +189,14 @@ class NeublaMultiLayerSampler:
         self.resp_query_counts = []
         self.resp_node_counts = []
 
-    def sample_neighbors(self, year_range, seed_nodes, fanout):
+    def sample_neighbors(self, year_range, seed_nodes, fanout, batch_size):
         seed_nodes = torch.LongTensor(seed_nodes)
-        batch_size = 100
+        # batch_size = 100
         src_l, tgt_l, ts_l = [], [], []
         min_year, max_year = min(year_range), max(year_range)
         # print('Begin sampling with {} nodes.'.format(len(seed_nodes)))
         # print(seed_nodes)
-        for batch_start in range(0, len(seed_nodes), 100):
+        for batch_start in range(0, len(seed_nodes), batch_size):
             self.resp_start_times.append(time.time() * 1e3)
 
             batch_end = batch_start + batch_size
@@ -205,7 +205,7 @@ class NeublaMultiLayerSampler:
             # 4 columns: src, dst, dist, timestamp
             edge_index = resp["edge_index"]
             src, tgt, ts = edge_index[0], edge_index[1], edge_index[3]
-            ts_mask = torch.logical_and(ts >= min_year, ts <= max_year)
+            ts_mask = torch.logical_and(ts >= min_year, ts < max_year)
             src_l.append(src[ts_mask])
             tgt_l.append(tgt[ts_mask])
             ts_l.append(ts[ts_mask])
@@ -230,22 +230,64 @@ class NeublaMultiLayerSampler:
         # for idx in src_edge:
         # for idx in tgt_edge:
             # assert idx.item() in node_set
-
+        tgt_edge, src_edge, ts_edata = self.limit_fanout(tgt_edge, src_edge, ts_edata, fanout)
         ret = dgl.graph((tgt_edge, src_edge), num_nodes = self.num_nodes)
         ret.edata['ts'] = ts_edata.clone().detach()
         return ret
     
-    def sample_frontier(self, block_id, year_range, seed_nodes):
+    def analyse(self, dst):
+        inds = [i for i in range(1, len(dst)) if dst[i-1] != dst[i]]
+        delta = [inds[i] - inds[i-1] for i in range(1, len(inds))]
+        import numpy as np
+        a = np.array(sorted(delta))
+        return a
+        
+        
+    def limit_fanout(self, tgt_edge, src_edge, ts_edata, fanout):
+        nn = len(src_edge)
+        if nn <= fanout:
+            return tgt_edge, src_edge, ts_edata
+        
+        src_edge, tgt_edge, ts_edata = src_edge.tolist(), tgt_edge.tolist(), ts_edata.tolist()
+        src_lst, tgt_lst, tsp_lst = [src_edge[0]], [tgt_edge[0]], [ts_edata[0]]
+        source, target, timesp = [], [], []
+        
+        for i in range(1, nn):
+            src, tgt, tsp = src_edge[i], tgt_edge[i], ts_edata[i]
+            if src != src_edge[i-1] or i==nn-1:
+                if i==nn-1:
+                    src_lst.append(src)
+                    tgt_lst.append(tgt)
+                    tsp_lst.append(tsp)
+                srcs, tgts, tsps = torch.tensor(src_lst), torch.tensor(tgt_lst), torch.tensor(tsp_lst)
+                src_lst, tgt_lst, tsp_lst = [src], [tgt], [tsp]
+                if len(srcs) > fanout:
+                    idx = np.random.randint(0, len(srcs), fanout)
+                    srcs, tgts, tsps = srcs[idx], tgts[idx], tsps[idx]
+                source.append(srcs)
+                target.append(tgts)
+                timesp.append(tsps)
+            else:
+                src_lst.append(src)
+                tgt_lst.append(tgt)
+                tsp_lst.append(tsp)
+        tgt_edge = torch.hstack(target).to(torch.int64)
+        src_edge = torch.hstack(source).to(torch.int64)
+        ts_edata = torch.hstack(timesp).to(torch.int64)
+        return tgt_edge, src_edge, ts_edata
+    
+    
+    def sample_frontier(self, block_id, year_range, seed_nodes, batch_size):
         fanout = self.fanouts[block_id]
-        frontier = self.sample_neighbors(year_range, seed_nodes, fanout)
+        frontier = self.sample_neighbors(year_range, seed_nodes, fanout, batch_size)
         return frontier
 
 
-    def sample_blocks(self, year_range, seed_nodes):
+    def sample_blocks(self, year_range, seed_nodes, batch_size=100):
         blocks = []
         for block_id in reversed(range(self.num_layer)):
             # print(block_id, self.fanouts[block_id], seed_nodes)
-            frontier = self.sample_frontier(block_id, year_range, seed_nodes)
+            frontier = self.sample_frontier(block_id, year_range, seed_nodes, batch_size)
             block = transform.to_block(frontier, seed_nodes)
             # seed_nodes = {ntype: block.srcnodes[ntype].data[dgl.NID] for ntype in block.srctypes} # ntype: _N
             seed_nodes = block.srcnodes['_N'].data[dgl.NID]
