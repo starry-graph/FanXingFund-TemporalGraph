@@ -23,6 +23,17 @@ from build_data import get_data
 logger = set_logger()
 
 def train_model(args, model, train_loader, features, opt):
+    batch_time_cols = ['batch', 'time_cost']
+    batch_time_file = 'results/{}-time.csv'.format(args.dataset)
+    if not os.path.exists(batch_time_file):
+        time_file = open(batch_time_file, 'w')
+        time_file.write(','.join(batch_time_cols))
+        time_file.write('\n')
+        time_file.close()
+
+    time_file = open(batch_time_file, 'a', buffering=1)
+    tot_time = 0.
+
     for epoch in range(args.epochs):
         loss_avg, y_probs, y_labels = 0, [], []
         model.train()
@@ -67,6 +78,9 @@ def train_model(args, model, train_loader, features, opt):
             batch_str = '\r Current batch: {}/{} costs {:.2f} seconds.'.format(str(step).zfill(4), len(batch_bar), batch_time)
             print(batch_str + sampler_str, end='')
 
+            tot_time += batch_time
+            time_file.write('{},{:.2f}\n'.format(step, tot_time))
+
 
         epoch_time = time.time() - epoch_start
         print('\n Epoch {:03d} costs {:.2f} seconds.'.format(epoch, epoch_time))
@@ -82,6 +96,7 @@ def train_model(args, model, train_loader, features, opt):
         logger.info('Epoch %03d Training loss: %.4f, ACC: %.4f, F1: %.4f, AP: %.4f, AUC: %.4f', \
             epoch, loss_avg, acc, f1, ap, auc)
 
+    time_file.close()
     df = pd.DataFrame({'Loss': [loss_avg], 'ACC': [acc], 'F1': [f1], 'AP': [ap] ,'AUC': [auc]})
     with args.rst_client.write(args.rst_path, encoding='utf-8', overwrite=True) as writer:
         df.to_csv(writer, index=False)
@@ -112,8 +127,9 @@ def config2args(config, args):
     args.epochs = 1
     args.dataset = 'DBLPV13'
     args.timespan_start = 2000
-    args.timespan_end = 2002
-    args.num_ts = 2
+    # args.timespan_end = 2002
+    args.timespan_end = 2021
+    args.num_ts = 21
 
     args.outfile_path = config['outFilePath']
     args.model_path = config['modelPath']

@@ -13,7 +13,6 @@ from dgl.convert import heterograph
 
 import torch
 from torch.utils.data import DataLoader, Dataset
-from IPython import embed
 # from util import myout
 
 class TemporalEdgeDataLoader2(EdgeDataLoader):
