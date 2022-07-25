@@ -155,7 +155,7 @@ def train(config):
         'n_hidden': 100, 
         'embed_dim': 100, 
         'n_layers': 2,
-        'gpu': 0, 
+        'gpu': 1, 
         'lr': 1e-2, 
         'temporal_feat': False, 
         'named_feats': 'all', 
