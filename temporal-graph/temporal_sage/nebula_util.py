@@ -1,5 +1,7 @@
 import torch
 import query_graph
+from concurrent.futures import ThreadPoolExecutor
+from tqdm import tqdm
 
 class LayerParam:
     def __init__(self, edge_type, **kwargs):
@@ -27,44 +29,61 @@ class LayerParam:
         )
 
 class QueryGraphChannel:
-    def __init__(self, addresses):
-        self.channel = query_graph.QueryGraphChannel(addresses)
+    def __init__(self, addresses, max_workers=25):
+        self.channel = query_graph.QueryGraphChannel(addresses, max_workers)
+        self.executor = ThreadPoolExecutor(max_workers)
     
-    def sample_subgraph(self, space_name, start_nodes, attrs, params):
+    def close(self, wait = False):
+        self.executor.shutdown(wait)
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, type, value, tb):
+        self.close()
+    
+    def _do_sample(self, space_name, start_nodes, attrs, params):
         start_nodes = start_nodes.contiguous()
         params = [p.to_cpp() if isinstance(p, LayerParam) else LayerParam(**p).to_cpp() for p in params]
         edge_index = self.channel.sample_subgraph(space_name, start_nodes, params)
         
+        # print(edge_index.size())
+        
         total_nodes = edge_index[:2].flatten().unique()
         node_index, node_attrs = self.channel.gather_attributes(space_name, total_nodes, attrs)
         assert total_nodes.size() == node_index.size()
+        
+        # print(node_index)
+        # print(node_attrs)
         
         return {
             "node_index": node_index,
             "node_attrs": node_attrs,
             "edge_index": edge_index,
         }
+    
+    def sample_subgraph(self, space_name, start_nodes, attrs, params):
+        return self.executor.submit(self._do_sample, space_name, start_nodes, attrs, params)
 
 if __name__ == '__main__':
-    channel = QueryGraphChannel(["192.168.1.11:9669"])
+    with QueryGraphChannel(["192.168.1.11:9669"]) as channel:
+        space_name = "DBLPV13"
+        start_nodes = torch.arange(64, dtype=torch.long)
+        params = [
+            {
+                "edge_type": "coauthor",
+                # "limit": 20,
+                "direct": "bidirect",
+            }
+        ]
 
-    space_name = "ia_contact"
-    start_nodes = torch.arange(100, dtype=torch.long)
-    # space_name = "DBLPV13"
-    # start_nodes = torch.arange(100, dtype=torch.long)
-    params = [
-        {
-            "edge_type": "coauthor",
-            # "limit": 20,
-            "direct": "bidirect",
-        }
-    ] * 2
-
-    import time
-    s = time.time()
-    n = 100
-    for _ in range(1):
-        resp = channel.sample_subgraph(space_name, start_nodes, ["author_id", "label"], params)
-        print(resp)
-    t = time.time()
-    print((t - s) / n)
+        import time
+        s = time.time()
+        n = 1000
+        futures = []
+        for future in tqdm([channel.sample_subgraph(space_name, start_nodes, ["author_id", "label"], params) for _ in range(n)]):
+            futures.append(future)
+        for future in tqdm(futures):
+            future.result()
+        t = time.time()
+        print((t - s) / n)

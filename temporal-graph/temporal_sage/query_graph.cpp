@@ -27,10 +27,10 @@ class QueryGraphChannel {
     std::unique_ptr<nebula::ConnectionPool> pool;
     bool verbose = false;
 public:
-    QueryGraphChannel(const std::vector<std::string>& addresses)
+    QueryGraphChannel(const std::vector<std::string>& addresses, std::uint32_t pool_size)
         : pool(new nebula::ConnectionPool())
     {
-        this->pool->init(addresses, nebula::Config{});
+        this->pool->init(addresses, nebula::Config{.maxConnectionPoolSize_ = pool_size});
     };
 
     torch::Tensor sample_subgraph(
@@ -38,6 +38,8 @@ public:
         torch::Tensor start_nodes,
         const std::vector<LayerParam>& params
     ) {
+        // TORCH_CHECK(start_nodes.is_contiguous(), "input tensor must be contiguous");
+
         auto s = start_nodes.data_ptr<std::int64_t>();
         auto n = start_nodes.numel();
         auto stmt = this->get_nebula_query(space_name, s, n, params);
@@ -241,8 +243,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     py::class_<LayerParam>(m, "LayerParam", py::dynamic_attr())
         .def(py::init<const std::string&, std::int64_t, std::tuple<std::int64_t, std::int64_t>, std::int8_t>());
     py::class_<QueryGraphChannel>(m, "QueryGraphChannel", py::dynamic_attr())
-        .def(py::init<const std::vector<std::string>&>())
-        .def("sample_subgraph", &QueryGraphChannel::sample_subgraph)
-        .def("gather_attributes", &QueryGraphChannel::gather_attributes)
-        .def("debug", &QueryGraphChannel::debug);
+        .def(py::init<const std::vector<std::string>&, std::uint32_t>())
+        .def("sample_subgraph", &QueryGraphChannel::sample_subgraph, py::call_guard<py::gil_scoped_release>())
+        .def("gather_attributes", &QueryGraphChannel::gather_attributes, py::call_guard<py::gil_scoped_release>())
+        .def("debug", &QueryGraphChannel::debug, py::call_guard<py::gil_scoped_release>());
 }

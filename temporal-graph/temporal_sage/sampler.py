@@ -191,17 +191,22 @@ class NeublaMultiLayerSampler:
 
     def sample_neighbors(self, year_range, seed_nodes, fanout, batch_size):
         seed_nodes = torch.LongTensor(seed_nodes)
-        # batch_size = 100
+        # We submit small batch nodes into concurrent sampling threads.
+        batch_size = 10
         src_l, tgt_l, ts_l = [], [], []
         min_year, max_year = min(year_range), max(year_range)
         # print('Begin sampling with {} nodes.'.format(len(seed_nodes)))
         # print(seed_nodes)
+        self.resp_start_times.append(time.time() * 1e3)
+        futures = []
         for batch_start in range(0, len(seed_nodes), batch_size):
-            self.resp_start_times.append(time.time() * 1e3)
-
             batch_end = batch_start + batch_size
             batch_nodes = seed_nodes[batch_start:batch_end]
-            resp = self.channel.sample_subgraph(self.space_name, batch_nodes, self.node_attrs, self.params)
+            future = self.channel.sample_subgraph(self.space_name, batch_nodes, self.node_attrs, self.params)
+            futures.append(future)
+        
+        for future in futures:
+            resp = future.result()
             # 4 columns: src, dst, dist, timestamp
             edge_index = resp["edge_index"]
             src, tgt, ts = edge_index[0], edge_index[1], edge_index[3]
@@ -210,10 +215,9 @@ class NeublaMultiLayerSampler:
             tgt_l.append(tgt[ts_mask])
             ts_l.append(ts[ts_mask])
 
-
-            self.resp_end_times.append(time.time() * 1e3)
-            self.resp_query_counts.append(len(batch_nodes))
-            self.resp_node_counts.append(len(batch_nodes))
+        self.resp_end_times.append(time.time() * 1e3)
+        self.resp_query_counts.append(len(futures))
+        self.resp_node_counts.append(len(seed_nodes))
 
         src_edge = [] if src_l == [] else torch.cat(src_l).to(torch.int64)
         tgt_edge = [] if src_l == [] else torch.cat(tgt_l).to(torch.int64)
