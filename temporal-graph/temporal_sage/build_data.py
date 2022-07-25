@@ -35,9 +35,9 @@ def covert_to_dgl(args, edges, nodes):
     assert(min(edges['from_node_id'].min(), edges['to_node_id'].min()) == nodes['node_id'].min())
     assert(np.all(np.array(nodes['id_map'].tolist()) == np.arange(len(nodes))))
 
-    min_ts, max_ts = edges['timestamp'].min(), edges['timestamp'].max()
+    min_ts, max_ts = edges['timestamp'].min(), edges['timestamp'].max() + 1 # left close right open
     if not (min_ts <= args.timespan_start < max_ts and min_ts < args.timespan_end <= max_ts):
-        raise ValueError(f'startTime/endTime must be between {min_ts} and {max_ts}')
+        raise ValueError(f'startTime/endTime must be within the range [{min_ts}, {max_ts})')
 
     node2nid = nodes.set_index('node_id').to_dict()['id_map']
     edges['src_nid'] = edges['from_node_id'].map(node2nid)
@@ -63,7 +63,7 @@ def split_graph(args, logger, graph, num_ts, mode):
         logger.warning(f'The number of snapshots is too large, and has been reduced to {num_ts}.')
     else:
         timespan = np.ceil(timespan)
-    logger.info(f'Split graph into {num_ts} snapshots between {ts_start} and {ts_end}, timespan is {timespan}.')
+    logger.info(f'Split graph into {num_ts} snapshots within the range [{ts_start}, {ts_end}), timespan is {timespan}.')
     graphs, time_range = [], []
 
     if args.temporal_feat:

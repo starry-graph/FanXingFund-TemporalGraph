@@ -140,6 +140,8 @@ def config2args(config, args):
     args.old_sampler = config['old_sampler']
     # args.root_dir = config['dataPath']
 
+    args.timespan_end += 1 # [] -> [), range left close right close -> left close right open
+    args.num_ts += 1 # Changing left close right open to left close right close by adding 1 to args.timespan_end and args.num_ts 
     return args
 
 
