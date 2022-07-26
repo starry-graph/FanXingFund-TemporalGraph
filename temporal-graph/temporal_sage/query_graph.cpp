@@ -80,45 +80,46 @@ public:
         torch::Tensor start_nodes,
         const std::vector<std::string>& attrs
     ) {
-        auto s = start_nodes.data_ptr<std::int64_t>();
-        auto n = start_nodes.numel();
-        auto stmt = this->get_nebula_gather(space_name, s, n, attrs);
-        if (this->verbose) {
-            std::cout << stmt << std::endl;
-        }
+        const size_t bs = 512;
 
-        auto result = this->nebula_execute(stmt);
-        auto& data = result.data;
-
-        // auto tmp = data->colNames;
-        // for (size_t k = 0; k < tmp.size(); k++) {
-        //     std::cout << tmp[k] << std::endl;
-        // }
-
-        std::int64_t m = data->rowSize();
+        std::int64_t n = start_nodes.numel();
         std::int64_t f = attrs.size();
-        auto node_index = torch::zeros({m}).toType(at::ScalarType::Long);
-        auto node_attrs = torch::zeros({m, f}).toType(at::ScalarType::Float);
 
-        auto index_ptr = node_index.data_ptr<std::int64_t>();
-        auto attrs_ptr = node_attrs.data_ptr<float>();
-
+        auto node_index = torch::zeros({n}).toType(at::ScalarType::Long);
+        auto node_attrs = torch::zeros({n, f}).toType(at::ScalarType::Float);
+        
         size_t k = 0;
-        for (auto row = data->begin(); row != data->end(); ++row, ++k) {
+        for (size_t t = 0; t < n; t += bs) {
+            auto _s = start_nodes.data_ptr<std::int64_t>() + t;
+            auto _n = std::min(n - t, bs);
+            auto stmt = this->get_nebula_gather(space_name, _s, _n, attrs);
 
-            auto nid = row->values[0];
-            TORCH_CHECK(nid.isInt(), "internel error: 1");
-            index_ptr[k] = nid.getInt();
+            if (this->verbose) {
+                std::cout << stmt << std::endl;
+            }
 
-            for (std::int64_t i = 0; i < f; i++) {
-                auto x = row->values[i + 1];
-                TORCH_CHECK(x.isNumeric(), "internel error: 2");
-                attrs_ptr[k*f + i] = x.toFloat().getFloat();
-                // if (x.isNumeric()) {
-                //     attrs_ptr[k*f + i] = x.toFloat().getFloat();
-                // } else {
-                //     attrs_ptr[k*f + i] = -1.0f;
-                // }
+            auto result = this->nebula_execute(stmt);
+            auto& data = result.data;
+
+            auto index_ptr = node_index.data_ptr<std::int64_t>();
+            auto attrs_ptr = node_attrs.data_ptr<float>();
+
+            for (auto row = data->begin(); row != data->end(); ++row, ++k) {
+
+                auto nid = row->values[0];
+                TORCH_CHECK(nid.isInt(), "internel error: 1");
+                index_ptr[k] = nid.getInt();
+
+                for (std::int64_t i = 0; i < f; i++) {
+                    auto x = row->values[i + 1];
+                    TORCH_CHECK(x.isNumeric(), "internel error: 2");
+                    attrs_ptr[k*f + i] = x.toFloat().getFloat();
+                    // if (x.isNumeric()) {
+                    //     attrs_ptr[k*f + i] = x.toFloat().getFloat();
+                    // } else {
+                    //     attrs_ptr[k*f + i] = -1.0f;
+                    // }
+                }
             }
         }
 
