@@ -75,7 +75,7 @@ class Model(nn.Module):
         hs = torch.stack(hs) # (seq, batch, dim)
         hs, _ = self.lstm(hs) # default (h0, c0) are all zeros
         h = hs[-1]
-        return self.pred(g, h), self.pred(neg_g, h)
+        return nn.Sigmoid()(self.pred(g, h)), nn.Sigmoid()(self.pred(neg_g, h))
 
 
 
