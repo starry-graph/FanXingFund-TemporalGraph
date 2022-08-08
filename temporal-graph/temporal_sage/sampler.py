@@ -205,6 +205,9 @@ class NeublaMultiLayerSampler:
             future = self.channel.sample_subgraph(self.space_name, batch_nodes, self.node_attrs, self.params)
             futures.append(future)
         
+        num_query = 0
+        num_node = 0
+
         for future in futures:
             resp = future.result()
             # 4 columns: src, dst, dist, timestamp
@@ -215,9 +218,12 @@ class NeublaMultiLayerSampler:
             tgt_l.append(tgt[ts_mask])
             ts_l.append(ts[ts_mask])
 
+            num_query += src.unique().numel()
+            num_node += edge_index.flatten().unique().numel()
+
         self.resp_end_times.append(time.time() * 1e3)
-        self.resp_query_counts.append(len(futures))
-        self.resp_node_counts.append(len(seed_nodes))
+        self.resp_query_counts.append(num_query)
+        self.resp_node_counts.append(num_node)
 
         src_edge = [] if src_l == [] else torch.cat(src_l).to(torch.int64)
         tgt_edge = [] if src_l == [] else torch.cat(tgt_l).to(torch.int64)
